@@ -1,0 +1,444 @@
+---
+title: Logic Layer
+description: Business logic organization, logic classes, and separation of concerns
+---
+
+## Overview
+
+Wonderous separates business logic from UI code using dedicated "logic" classes. These classes are registered with GetIt for dependency injection and accessed throughout the app via global variables and mixins.
+
+## Architecture Principles
+
+### Separation of Concerns
+
+The logic layer is completely separate from the UI layer:
+- **Logic classes**: Handle state management, data access, and business rules
+- **UI widgets**: Handle presentation and user interaction only
+- **No business logic in widgets**: Widgets delegate all decisions to logic classes
+
+### Dependency Injection
+
+All logic classes are registered with GetIt at app startup:
+
+```dart
+void main() {
+  // Register logic classes
+  GetIt.I.registerLazySingleton<AppLogic>(() => AppLogic());
+  GetIt.I.registerLazySingleton<SettingsLogic>(() => SettingsLogic());
+  GetIt.I.registerLazySingleton<WondersLogic>(() => WondersLogic());
+  // ... more registrations
+}
+```
+
+Widgets access logic classes via:
+- Global variables: `appLogic`, `wondersLogic`, `settingsLogic`
+- GetIt mixin: `GetItStatefulWidgetMixin`
+
+### Global Access
+
+Logic instances are exposed as global variables in `lib/main.dart`:
+
+```dart
+AppLogic get appLogic => GetIt.I.get<AppLogic>();
+WondersLogic get wondersLogic => GetIt.I.get<WondersLogic>();
+SettingsLogic get settingsLogic => GetIt.I.get<SettingsLogic>();
+CollectiblesLogic get collectiblesLogic => GetIt.I.get<CollectiblesLogic>();
+TimelineLogic get timelineLogic => GetIt.I.get<TimelineLogic>();
+// ... more getters
+```
+
+## Core Logic Classes
+
+### AppLogic
+
+`AppLogic` handles app-level concerns like initialization, orientation, and navigation.
+
+Location: `lib/logic/app_logic.dart`
+
+#### Responsibilities
+
+- **Bootstrap**: Initialize services and load data
+- **Orientation**: Manage device orientation settings
+- **App Size**: Track and respond to screen size changes
+- **Image Precaching**: Preload critical images
+- **Dialog Navigation**: Show full-screen dialogs
+
+#### Key Properties
+
+```dart
+class AppLogic {
+  Size _appSize = Size.zero;
+  bool isBootstrapComplete = false;
+  List<Axis> supportedOrientations = [Axis.vertical, Axis.horizontal];
+  List<Axis>? _supportedOrientationsOverride;
+}
+```
+
+#### Bootstrap Sequence
+
+```dart
+Future<void> bootstrap() async {
+  debugPrint('bootstrap start...');
+  
+  // Set window size (desktop)
+  if (!kIsWeb && (PlatformInfo.isWindows || PlatformInfo.isMacOS)) {
+    await DesktopWindow.setMinWindowSize($styles.sizes.minAppSize);
+  }
+
+  // Load bitmaps
+  await AppBitmaps.init();
+
+  // Set refresh rate (Android)
+  if (!kIsWeb && PlatformInfo.isAndroid) {
+    await FlutterDisplayMode.setHighRefreshRate();
+  }
+
+  // Load settings
+  await settingsLogic.load();
+
+  // Load localizations
+  await localeLogic.load();
+
+  // Initialize wonders data
+  wondersLogic.init();
+
+  // Initialize timeline events
+  timelineLogic.init();
+
+  // Initialize and load collectibles
+  collectiblesLogic.init();
+  await collectiblesLogic.load();
+
+  // Mark bootstrap complete
+  isBootstrapComplete = true;
+
+  // Navigate to initial view
+  bool showIntro = settingsLogic.hasCompletedOnboarding.value == false;
+  if (showIntro) {
+    appRouter.go(ScreenPaths.intro);
+  } else {
+    appRouter.go(initialDeeplink ?? ScreenPaths.home);
+  }
+}
+```
+
+#### Orientation Management
+
+```dart
+void handleAppSizeChanged(Size appSize) {
+  // Disable landscape on small devices
+  bool isSmall = display.size.shortestSide / display.devicePixelRatio < 600;
+  supportedOrientations = isSmall 
+    ? [Axis.vertical] 
+    : [Axis.vertical, Axis.horizontal];
+  _updateSystemOrientation();
+  _appSize = appSize;
+}
+
+bool shouldUseNavRail() => 
+  _appSize.width > _appSize.height && _appSize.height > 250;
+```
+
+### WondersLogic
+
+`WondersLogic` manages wonder data access.
+
+Location: `lib/logic/wonders_logic.dart`
+
+```dart
+class WondersLogic {
+  List<WonderData> all = [];
+  final int timelineStartYear = -3000;
+  final int timelineEndYear = 2200;
+
+  WonderData getData(WonderType value) {
+    WonderData? result = all.firstWhereOrNull((w) => w.type == value);
+    if (result == null) throw ('Could not find data for wonder type $value');
+    return result;
+  }
+
+  void init() {
+    all = [
+      GreatWallData(),
+      PetraData(),
+      ColosseumData(),
+      ChichenItzaData(),
+      MachuPicchuData(),
+      TajMahalData(),
+      ChristRedeemerData(),
+      PyramidsGizaData(),
+    ];
+  }
+}
+```
+
+#### Usage
+
+```dart
+// Get data for a specific wonder
+WonderData wonder = wondersLogic.getData(WonderType.chichenItza);
+
+// Iterate all wonders
+for (var wonder in wondersLogic.all) {
+  print(wonder.title);
+}
+```
+
+### SettingsLogic
+
+`SettingsLogic` manages app settings with automatic persistence.
+
+Location: `lib/logic/settings_logic.dart`
+
+```dart
+class SettingsLogic with ThrottledSaveLoadMixin {
+  @override
+  String get fileName => 'settings.dat';
+
+  late final hasCompletedOnboarding = ValueNotifier<bool>(false)
+    ..addListener(scheduleSave);
+  late final hasDismissedSearchMessage = ValueNotifier<bool>(false)
+    ..addListener(scheduleSave);
+  late final isSearchPanelOpen = ValueNotifier<bool>(true)
+    ..addListener(scheduleSave);
+  late final currentLocale = ValueNotifier<String?>(null)
+    ..addListener(scheduleSave);
+  late final prevWonderIndex = ValueNotifier<int?>(null)
+    ..addListener(scheduleSave);
+
+  final bool useBlurs = !PlatformInfo.isAndroid;
+
+  Future<void> changeLocale(Locale value) async {
+    currentLocale.value = value.languageCode;
+    await localeLogic.loadIfChanged(value);
+    wondersLogic.init();
+    timelineLogic.init();
+  }
+}
+```
+
+#### Persistence Pattern
+
+Settings use `ThrottledSaveLoadMixin` for automatic save/load:
+
+```dart
+@override
+void copyFromJson(Map<String, dynamic> value) {
+  hasCompletedOnboarding.value = value['hasCompletedOnboarding'] ?? false;
+  hasDismissedSearchMessage.value = value['hasDismissedSearchMessage'] ?? false;
+  currentLocale.value = value['currentLocale'];
+  isSearchPanelOpen.value = value['isSearchPanelOpen'] ?? false;
+  prevWonderIndex.value = value['lastWonderIndex'];
+}
+
+@override
+Map<String, dynamic> toJson() {
+  return {
+    'hasCompletedOnboarding': hasCompletedOnboarding.value,
+    'hasDismissedSearchMessage': hasDismissedSearchMessage.value,
+    'currentLocale': currentLocale.value,
+    'isSearchPanelOpen': isSearchPanelOpen.value,
+    'lastWonderIndex': prevWonderIndex.value,
+  };
+}
+```
+
+Any change to a `ValueNotifier` triggers `scheduleSave()`, which debounces and persists to disk.
+
+### CollectiblesLogic
+
+`CollectiblesLogic` manages collectible discovery state.
+
+Location: `lib/logic/collectibles_logic.dart`
+
+```dart
+class CollectiblesLogic with ThrottledSaveLoadMixin {
+  @override
+  String get fileName => 'collectibles.dat';
+
+  final List<CollectibleData> all = collectiblesData;
+  late final statesById = ValueNotifier<Map<String, int>>({})
+    ..addListener(_updateCounts);
+
+  int _discoveredCount = 0;
+  int get discoveredCount => _discoveredCount;
+
+  int _exploredCount = 0;
+  int get exploredCount => _exploredCount;
+
+  void setState(String id, int state) {
+    Map<String, int> states = Map.of(statesById.value);
+    states[id] = state;
+    statesById.value = states;
+    if (state == CollectibleState.discovered) {
+      final data = fromId(id)!;
+      _updateNativeHomeWidgetData(
+        title: data.title,
+        id: data.id,
+        imageUrl: data.imageUrlSmall,
+      );
+    }
+    scheduleSave();
+  }
+
+  CollectibleData? fromId(String? id) => 
+    id == null ? null : all.firstWhereOrNull((o) => o.id == id);
+
+  List<CollectibleData> forWonder(WonderType wonder) {
+    return all.where((o) => o.wonder == wonder).toList(growable: false);
+  }
+
+  void reset() {
+    Map<String, int> states = {};
+    for (int i = 0; i < all.length; i++) {
+      states[all[i].id] = CollectibleState.lost;
+    }
+    _updateNativeHomeWidgetData(); // clear home widget data
+    statesById.value = states;
+    scheduleSave();
+  }
+}
+```
+
+### TimelineLogic
+
+`TimelineLogic` manages timeline event data.
+
+Location: `lib/logic/timeline_logic.dart`
+
+Provides:
+- Global historical events
+- Wonder-specific events
+- Combined timeline data for display
+
+### ArtifactApiLogic
+
+`ArtifactApiLogic` handles Metropolitan Museum API integration.
+
+Location: `lib/logic/artifact_api_logic.dart`
+
+Provides:
+- Artifact search by wonder and date range
+- Individual artifact data fetching
+- API response caching
+
+### UnsplashLogic
+
+`UnsplashLogic` manages Unsplash photo integration.
+
+Location: `lib/logic/unsplash_logic.dart`
+
+Provides:
+- Photo fetching by collection
+- Photo search
+- Attribution data
+
+### LocaleLogic
+
+`LocaleLogic` handles internationalization.
+
+Location: `lib/logic/locale_logic.dart`
+
+Provides:
+- Locale loading
+- Language switching
+- Localized string access
+
+## State Management Pattern
+
+### ValueNotifier
+
+Logic classes use `ValueNotifier` for reactive state:
+
+```dart
+late final hasCompletedOnboarding = ValueNotifier<bool>(false)
+  ..addListener(scheduleSave);
+```
+
+Widgets listen to changes:
+
+```dart
+class MyWidget extends StatelessWidget with GetItStatefulWidgetMixin {
+  @override
+  Widget build(BuildContext context) {
+    bool onboarded = watchX((SettingsLogic s) => s.hasCompletedOnboarding);
+    return Text(onboarded ? 'Welcome back!' : 'Welcome!');
+  }
+}
+```
+
+### GetIt Mixin
+
+Widgets use `GetItStatefulWidgetMixin` for reactive dependencies:
+
+```dart
+class HomeScreen extends StatefulWidget with GetItStatefulWidgetMixin {
+  HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<WonderData> get _wonders => wondersLogic.all;
+  // ...
+}
+```
+
+## Service Classes
+
+Some logic classes wrap external services:
+
+### ArtifactApiService
+
+Location: `lib/logic/artifact_api_service.dart`
+
+HTTP client for MET Museum API
+
+### UnsplashService
+
+Location: `lib/logic/unsplash_service.dart`
+
+HTTP client for Unsplash API
+
+### NativeWidgetService
+
+Location: `lib/logic/native_widget_service.dart`
+
+Platform channel for home screen widgets
+
+## Best Practices
+
+1. **Single Responsibility**: Each logic class handles one domain area
+2. **No UI Code**: Logic classes never import Flutter widgets (except foundation)
+3. **Global Access**: Expose logic instances as global getters for convenience
+4. **Lifecycle**: Initialize in `AppLogic.bootstrap()` in dependency order
+5. **State**: Use `ValueNotifier` for reactive state that UI needs to observe
+6. **Persistence**: Use `ThrottledSaveLoadMixin` for data that needs to persist
+7. **Immutability**: Keep data models immutable; only logic classes mutate state
+8. **Testing**: Logic classes are easy to test in isolation
+
+## Initialization Order
+
+The bootstrap sequence is carefully ordered:
+
+1. Platform setup (window size, refresh rate)
+2. Asset loading (bitmaps)
+3. Settings loading (persistent data)
+4. Localization loading
+5. Wonder data initialization
+6. Timeline data initialization
+7. Collectibles initialization and loading
+8. Navigation to initial screen
+
+## Related Files
+
+- `lib/logic/app_logic.dart` - App lifecycle and global utilities
+- `lib/logic/wonders_logic.dart` - Wonder data access
+- `lib/logic/settings_logic.dart` - App settings management
+- `lib/logic/collectibles_logic.dart` - Collectible discovery state
+- `lib/logic/timeline_logic.dart` - Timeline event data
+- `lib/logic/artifact_api_logic.dart` - MET Museum API integration
+- `lib/logic/unsplash_logic.dart` - Unsplash API integration
+- `lib/logic/locale_logic.dart` - Internationalization
+- `lib/logic/common/save_load_mixin.dart` - Persistence utilities

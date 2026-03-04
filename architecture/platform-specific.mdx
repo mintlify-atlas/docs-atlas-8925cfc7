@@ -1,0 +1,203 @@
+---
+title: Platform-Specific Code
+description: Learn how Wonderous handles platform-specific implementations across web, mobile, and desktop.
+---
+
+Wonderous is designed to run seamlessly across web, mobile (iOS/Android), and desktop (Windows, macOS, Linux) platforms. The app uses various strategies to detect platforms and conditionally execute platform-specific code.
+
+## Platform Detection with PlatformInfo
+
+The `PlatformInfo` class (`lib/logic/common/platform_info.dart`) provides a centralized way to detect the current platform:
+
+```dart
+class PlatformInfo {
+  static const _desktopPlatforms = [
+    TargetPlatform.macOS,
+    TargetPlatform.windows,
+    TargetPlatform.linux,
+  ];
+  static const _mobilePlatforms = [TargetPlatform.android, TargetPlatform.iOS];
+
+  static bool get isDesktop => _desktopPlatforms.contains(defaultTargetPlatform) && !kIsWeb;
+  static bool get isDesktopOrWeb => isDesktop || kIsWeb;
+  static bool get isMobile => _mobilePlatforms.contains(defaultTargetPlatform) && !kIsWeb;
+
+  static bool get isWindows => defaultTargetPlatform == TargetPlatform.windows;
+  static bool get isLinux => defaultTargetPlatform == TargetPlatform.linux;
+  static bool get isMacOS => defaultTargetPlatform == TargetPlatform.macOS;
+  static bool get isAndroid => defaultTargetPlatform == TargetPlatform.android;
+  static bool get isIOS => defaultTargetPlatform == TargetPlatform.iOS;
+}
+```
+
+### Key Features
+
+- **Desktop Detection**: Combines platform checks with `!kIsWeb` to ensure desktop platforms aren't misidentified when running as web
+- **Mobile Detection**: Identifies iOS and Android devices (excluding web)
+- **Individual Platform Checks**: Provides granular platform detection for OS-specific features
+- **Network Status**: Includes connection checking via `InternetConnectionChecker`
+
+## Web-Specific Code with kIsWeb
+
+Flutter's `kIsWeb` constant (from `package:flutter/foundation.dart`) is used throughout the app to conditionally execute web-specific code:
+
+### Native Splash Screen
+
+```dart
+// lib/main.dart:19
+if (!kIsWeb) {
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+}
+```
+
+The native splash screen is only shown on mobile/desktop platforms, as web uses a custom HTML-based splash screen.
+
+### Image Precaching
+
+```dart
+// lib/main.dart:48
+if (!_imagesCached && kIsWeb) {
+  appLogic.precacheIcons(context);
+  appLogic.precacheWonderImages(context);
+  _imagesCached = true;
+}
+```
+
+Web requires explicit precaching in `didChangeDependencies` to ensure images load smoothly.
+
+### Hover Effects
+
+```dart
+// lib/ui/common/controls/buttons.dart:196
+if (hoverEffect && kIsWeb) {
+  button = _ButtonHoverEffect(button, circular);
+}
+```
+
+Hover effects are only applied on web where mouse interaction is expected.
+
+### Keyboard Shortcuts
+
+```dart
+// lib/ui/common/app_shortcuts.dart:7
+if (kIsWeb) ...{
+  // On the web, enter activates buttons, but not other controls.
+  SingleActivator(LogicalKeyboardKey.enter): ButtonActivateIntent(),
+  SingleActivator(LogicalKeyboardKey.numpadEnter): ButtonActivateIntent(),
+} else ...{
+  SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+  // ... more shortcuts
+}
+```
+
+Web has different keyboard behavior compared to desktop platforms.
+
+## Desktop Window Management
+
+Desktop platforms use the `desktop_window` package for window configuration:
+
+```dart
+// lib/logic/app_logic.dart:39
+if (!kIsWeb && (PlatformInfo.isWindows || PlatformInfo.isMacOS)) {
+  await DesktopWindow.setMinWindowSize($styles.sizes.minAppSize);
+}
+```
+
+<Note>
+  The `desktop_window` package is not called on Linux due to reported issues (see issue #183 in the repository).
+</Note>
+
+Minimum window size is set to `Size(380, 650)` to ensure the UI remains usable.
+
+## Platform-Specific Behaviors
+
+### Haptic Feedback
+
+```dart
+// lib/ui/common/utils/app_haptics.dart:15
+static void buttonPress() {
+  // Android/Fuchsia expect haptics on all button presses, iOS does not.
+  if (!kIsWeb && PlatformInfo.isAndroid) {
+    lightImpact();
+  }
+}
+```
+
+Haptic feedback is only triggered on Android for button presses, following platform conventions.
+
+### Scroll Behavior
+
+```dart
+// lib/ui/common/app_scroll_behavior.dart:21
+Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
+  if (PlatformInfo.isMobile) return child;
+  return RawScrollbar(
+    controller: details.controller,
+    thumbVisibility: PlatformInfo.isDesktopOrWeb,
+    thickness: 8,
+    interactive: true,
+    child: child,
+  );
+}
+```
+
+Scrollbars are only shown on desktop and web platforms.
+
+### Video Player Controls
+
+```dart
+// lib/ui/common/modals/fullscreen_video_viewer.dart:66
+child: (PlatformInfo.isMobile || kIsWeb)
+    ? video
+    : CenterBox(child: video)
+```
+
+Video layout differs between mobile/web and desktop platforms.
+
+## Platform Folders
+
+The project includes platform-specific folders for native code:
+
+- **android/**: Android-specific configuration and native code
+- **ios/**: iOS-specific configuration and native code
+- **macos/**: macOS-specific configuration (Podfile, Runner)
+- **windows/**: Windows-specific configuration (CMakeLists.txt, runner)
+- **web/**: Web-specific assets (index.html, manifest.json, icons)
+
+### Web Configuration
+
+The `web/index.html` file includes:
+
+- Viewport meta tags for mobile web
+- Google Maps API integration
+- Custom splash screen styling
+- PWA manifest linking
+
+## Mobile vs Desktop Differences
+
+### Form Factor Detection
+
+```dart
+// lib/logic/app_logic.dart:104
+bool isSmall = display.size.shortestSide / display.devicePixelRatio < 600;
+supportedOrientations = isSmall ? [Axis.vertical] : [Axis.vertical, Axis.horizontal];
+```
+
+Devices with a shortest side under 600dp are locked to portrait orientation.
+
+### Navigation Rail
+
+```dart
+// lib/logic/app_logic.dart:113
+bool shouldUseNavRail() => _appSize.width > _appSize.height && _appSize.height > 250;
+```
+
+The app switches to a navigation rail layout in landscape mode on larger screens.
+
+## Best Practices
+
+1. **Use PlatformInfo over direct platform checks**: Centralized platform detection with web awareness
+2. **Combine kIsWeb with platform checks**: Prevents misidentification of web builds
+3. **Test on all target platforms**: Platform-specific code paths need verification on each platform
+4. **Handle platform capabilities gracefully**: Use conditional compilation for platform-specific packages
+5. **Document platform limitations**: Note any known issues or unsupported features per platform

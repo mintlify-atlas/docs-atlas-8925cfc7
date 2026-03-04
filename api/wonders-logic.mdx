@@ -1,0 +1,218 @@
+---
+title: "WondersLogic"
+description: "Central controller for managing the seven wonders data and timeline ranges"
+---
+
+## Overview
+
+The `WondersLogic` class manages all data related to the seven wonders of the world in the Wonderous app. It provides access to wonder-specific information and defines the timeline year ranges for historical context.
+
+## Class Definition
+
+```dart
+class WondersLogic {
+  List<WonderData> all = [];
+  final int timelineStartYear = -3000;
+  final int timelineEndYear = 2200;
+}
+```
+
+## Properties
+
+<ParamField path="all" type="List<WonderData>">
+  A list containing data for all seven wonders. Populated during initialization with instances of wonder-specific data classes.
+</ParamField>
+
+<ParamField path="timelineStartYear" type="int">
+  The starting year for the app's timeline view. Set to `-3000` (3000 BCE).
+</ParamField>
+
+<ParamField path="timelineEndYear" type="int">
+  The ending year for the app's timeline view. Set to `2200` (2200 CE).
+</ParamField>
+
+## Methods
+
+### init()
+
+Initializes the wonders data by populating the `all` list with instances of each wonder's data class.
+
+```dart
+void init()
+```
+
+**Initialized Wonders:**
+1. Great Wall of China (`GreatWallData`)
+2. Petra (`PetraData`)
+3. Colosseum (`ColosseumData`)
+4. Chichen Itza (`ChichenItzaData`)
+5. Machu Picchu (`MachuPicchuData`)
+6. Taj Mahal (`TajMahalData`)
+7. Christ the Redeemer (`ChristRedeemerData`)
+8. Pyramids of Giza (`PyramidsGizaData`)
+
+**Example:**
+
+```dart
+wondersLogic.init();
+print('Loaded ${wondersLogic.all.length} wonders'); // Output: Loaded 8 wonders
+```
+
+### getData()
+
+Retrieves the `WonderData` object for a specific wonder type.
+
+```dart
+WonderData getData(WonderType value)
+```
+
+**Parameters:**
+- `value` - The `WonderType` enum value identifying the wonder
+
+**Returns:** The corresponding `WonderData` object
+
+**Throws:** Exception if the wonder type is not found
+
+**Example:**
+
+```dart
+// Get data for the Taj Mahal
+WonderData tajMahal = wondersLogic.getData(WonderType.tajMahal);
+print(tajMahal.title); // Output: "Taj Mahal"
+print(tajMahal.startYr); // Output: 1632
+
+// Get data for the Great Wall
+WonderData greatWall = wondersLogic.getData(WonderType.greatWall);
+print(greatWall.title); // Output: "Great Wall of China"
+```
+
+## WonderType Enum
+
+The `WonderType` enum identifies each of the seven wonders:
+
+```dart
+enum WonderType {
+  chichenItza,
+  christRedeemer,
+  colosseum,
+  greatWall,
+  machuPicchu,
+  petra,
+  pyramidsGiza,
+  tajMahal,
+}
+```
+
+## WonderData Structure
+
+Each wonder's data includes:
+
+- **Basic Info:** Title, subtitle, region
+- **Historical Data:** Start year, construction timeline
+- **Content:** Description, history, construction details
+- **Media:** Image paths, video URLs
+- **Artifacts:** Associated collectibles and artifact culture
+- **Location:** Geographic coordinates, map information
+- **Events:** Historical events related to the wonder
+
+## Usage Examples
+
+### Accessing Wonder Data
+
+```dart
+// Access the global WondersLogic instance
+WondersLogic get wondersLogic => GetIt.I.get<WondersLogic>();
+
+// Initialize wonders (called during app bootstrap)
+wondersLogic.init();
+
+// Iterate through all wonders
+for (var wonder in wondersLogic.all) {
+  print('${wonder.title} - Built in ${wonder.startYr}');
+}
+```
+
+### Retrieving Specific Wonder Data
+
+```dart
+// Get data for a specific wonder
+final colosseumData = wondersLogic.getData(WonderType.colosseum);
+
+print(colosseumData.title); // "Colosseum"
+print(colosseumData.subtitle); // "Rome, Italy"
+print(colosseumData.regionTitle); // "Europe"
+print(colosseumData.startYr); // 80
+```
+
+### Using Timeline Ranges
+
+```dart
+// Access timeline year ranges
+final startYear = wondersLogic.timelineStartYear; // -3000
+final endYear = wondersLogic.timelineEndYear; // 2200
+final totalYears = endYear - startYear; // 5200 years
+
+// Use in timeline visualization
+print('Timeline spans $totalYears years');
+```
+
+### Filtering and Searching
+
+```dart
+// Find wonders built in a specific region
+final asianWonders = wondersLogic.all.where(
+  (wonder) => wonder.regionTitle == 'Asia'
+).toList();
+
+// Find ancient wonders (built before year 0)
+final ancientWonders = wondersLogic.all.where(
+  (wonder) => wonder.startYr < 0
+).toList();
+
+// Find the oldest wonder
+final oldest = wondersLogic.all.reduce(
+  (a, b) => a.startYr < b.startYr ? a : b
+);
+print('Oldest wonder: ${oldest.title}');
+```
+
+## Registration
+
+The `WondersLogic` instance is registered as a singleton using GetIt:
+
+```dart
+void registerSingletons() {
+  GetIt.I.registerLazySingleton<WondersLogic>(() => WondersLogic());
+}
+```
+
+## Initialization Flow
+
+The `WondersLogic` initialization is part of the app's bootstrap process:
+
+```dart
+Future<void> bootstrap() async {
+  // ... other initialization steps
+  
+  // Wonders Data
+  wondersLogic.init();
+  
+  // ... remaining initialization
+}
+```
+
+## Related Classes
+
+- `WonderData` - Base class containing wonder information
+- `WonderType` - Enum identifying each wonder
+- `TimelineLogic` - Uses wonder data for timeline events
+- `CollectiblesLogic` - Links collectibles to wonders
+- Individual wonder data classes:
+  - `ChichenItzaData`
+  - `ChristRedeemerData`
+  - `ColosseumData`
+  - `GreatWallData`
+  - `MachuPicchuData`
+  - `PetraData`
+  - `PyramidsGizaData`
+  - `TajMahalData`

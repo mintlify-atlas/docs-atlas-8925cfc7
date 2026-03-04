@@ -1,0 +1,267 @@
+---
+title: "CollectibleData"
+description: "Data model for collectible artifacts that users can discover and explore throughout the app"
+---
+
+## Overview
+
+The `CollectibleData` class represents collectible artifacts that users can discover while exploring the wonders. These collectibles are hidden items that users can find, adding a gamification element to the app experience.
+
+**Location:** `lib/logic/data/collectible_data.dart:10`
+
+## CollectibleState Class
+
+Defines the three states a collectible can be in:
+
+```dart
+class CollectibleState {
+  static const int lost = 0;       // Not yet discovered
+  static const int discovered = 1; // Found but not fully explored
+  static const int explored = 2;   // Fully explored
+}
+```
+
+## Class Definition
+
+```dart
+class CollectibleData {
+  CollectibleData({
+    required this.title,
+    required this.iconName,
+    required this.artifactId,
+    required this.wonder,
+  }) {
+    icon = AssetImage('\${ImagePaths.collectibles}/\$iconName.png');
+  }
+}
+```
+
+## Properties
+
+### Display Information
+
+<ResponseField name="title" type="String" required>
+  The display name of the collectible artifact
+</ResponseField>
+
+<ResponseField name="iconName" type="String" required>
+  Name of the icon file (without extension) used to represent the collectible type
+</ResponseField>
+
+<ResponseField name="icon" type="ImageProvider">
+  Auto-generated `ImageProvider` based on `iconName`, loaded from the collectibles assets folder
+</ResponseField>
+
+### References
+
+<ResponseField name="artifactId" type="String" required>
+  Metropolitan Museum of Art artifact ID associated with this collectible
+</ResponseField>
+
+<ResponseField name="wonder" type="WonderType" required>
+  The wonder this collectible is associated with (e.g., `WonderType.chichenItza`)
+</ResponseField>
+
+## Computed Properties
+
+### id
+
+```dart
+String get id => artifactId;
+```
+
+Alias for `artifactId`, used as the unique identifier for the collectible.
+
+### subtitle
+
+```dart
+String get subtitle => wondersLogic.getData(wonder).artifactCulture;
+```
+
+Returns the culture name from the associated wonder's data (e.g., "Mayan", "Inca").
+
+### imageUrl
+
+```dart
+String get imageUrl => ArtifactData.getSelfHostedImageUrl(id);
+```
+
+Returns the full-resolution image URL for the collectible's artifact.
+
+### imageUrlSmall
+
+```dart
+String get imageUrlSmall => ArtifactData.getSelfHostedImageUrlSmall(id);
+```
+
+Returns the small (600px) image URL for the collectible's artifact.
+
+## Icon Types
+
+Collectibles use different icon types to represent their category:
+
+| Icon Name | Description | Example Collectibles |
+|-----------|-------------|---------------------|
+| `jewelry` | Jewelry and ornamental items | Pendant, Bird Ornament, Fixed fan |
+| `picture` | Paintings and photographs | La Prison, à Chichen-Itza |
+| `statue` | Sculptures and figurines | Engraved Horn, Camelid figurine |
+| `vase` | Pottery and vessels | Glass hexagonal amphoriskos, Jar with Dragon |
+| `scroll` | Documents and calligraphy | Biographies, Panel of Calligraphy |
+| `textile` | Fabrics and woven items | Handkerchiefs, Eight-Pointed Star Tunic |
+
+## Collectibles Data
+
+The app includes a predefined list of 24 collectibles (3 per wonder) in `collectiblesData`:
+
+**Location:** `lib/logic/data/collectible_data.dart:38`
+
+### Example Collectibles
+
+#### Chichen Itza
+
+```dart
+CollectibleData(
+  title: 'Pendant',
+  wonder: WonderType.chichenItza,
+  artifactId: '701645',
+  iconName: 'jewelry',
+),
+CollectibleData(
+  title: 'Bird Ornament',
+  wonder: WonderType.chichenItza,
+  artifactId: '310555',
+  iconName: 'jewelry',
+),
+CollectibleData(
+  title: 'La Prison, à Chichen-Itza',
+  wonder: WonderType.chichenItza,
+  artifactId: '286467',
+  iconName: 'picture',
+),
+```
+
+#### Taj Mahal
+
+```dart
+CollectibleData(
+  title: 'Dagger with Scabbard',
+  wonder: WonderType.tajMahal,
+  artifactId: '24907',
+  iconName: 'jewelry',
+),
+CollectibleData(
+  title: 'The House of Bijapur',
+  wonder: WonderType.tajMahal,
+  artifactId: '453183',
+  iconName: 'picture',
+),
+CollectibleData(
+  title: 'Panel of Nasta\'liq Calligraphy',
+  wonder: WonderType.tajMahal,
+  artifactId: '453983',
+  iconName: 'scroll',
+),
+```
+
+## Usage Example
+
+```dart
+import 'package:wonders/logic/data/collectible_data.dart';
+
+// Access the global collectibles list
+final allCollectibles = collectiblesData;
+
+// Filter collectibles by wonder
+final chichenCollectibles = collectiblesData
+    .where((c) => c.wonder == WonderType.chichenItza)
+    .toList();
+
+// Get a specific collectible
+final collectible = collectiblesData[0];
+
+// Access properties
+print(collectible.title);    // "Pendant"
+print(collectible.id);       // "701645"
+print(collectible.subtitle); // "Maya" (from wonder's artifactCulture)
+
+// Get image URLs
+final fullImage = collectible.imageUrl;
+// Returns: 'https://www.wonderous.info/met/701645.jpg'
+
+final thumbnail = collectible.imageUrlSmall;
+// Returns: 'https://www.wonderous.info/met/701645_600.jpg'
+
+// Access the icon asset
+fina​l icon = collectible.icon;
+// ImageProvider for 'assets/images/collectibles/jewelry.png'
+
+// Check collectible state (managed elsewhere in the app)
+int state = CollectibleState.lost; // User hasn't found it yet
+if (state == CollectibleState.discovered) {
+  print('Collectible discovered!');
+}
+```
+
+## Collectible States
+
+While `CollectibleData` defines the static properties of collectibles, their state (lost/discovered/explored) is typically managed separately in the app's state management system:
+
+```dart
+// Tracking collectible progress
+Map<String, int> collectibleStates = {
+  '701645': CollectibleState.discovered,
+  '310555': CollectibleState.explored,
+  '286467': CollectibleState.lost,
+};
+
+// Check if a collectible has been found
+final isDiscovered = collectibleStates[collectible.id] != CollectibleState.lost;
+
+// Update state when user finds a collectible
+collectibleStates[collectible.id] = CollectibleState.discovered;
+```
+
+## Integration with WonderData
+
+Collectibles are referenced in `WonderData` through the `hiddenArtifacts` property:
+
+```dart
+// In ChichenItzaData
+hiddenArtifacts: const [
+  '701645',  // Pendant
+  '310555',  // Bird Ornament
+  '286467',  // La Prison
+],
+```
+
+These IDs correspond to the `artifactId` values in the `collectiblesData` list.
+
+## MET Museum Links
+
+Each collectible can be viewed on the Metropolitan Museum of Art website:
+
+```
+https://www.metmuseum.org/art/collection/search/{artifactId}
+```
+
+**Example:** For artifact ID `701645`:
+```
+https://www.metmuseum.org/art/collection/search/701645
+```
+
+## All Collectibles by Wonder
+
+- **Chichen Itza**: 3 collectibles (2 jewelry, 1 picture)
+- **Christ the Redeemer**: 3 collectibles (1 statue, 1 jewelry, 1 textile)
+- **Colosseum**: 3 collectibles (2 vases, 1 statue, 1 picture)
+- **Great Wall**: 3 collectibles (1 scroll, 1 vase, 1 textile)
+- **Machu Picchu**: 3 collectibles (1 textile, 2 statues, 1 vase)
+- **Petra**: 3 collectibles (1 statue, 2 vases)
+- **Pyramids of Giza**: 3 collectibles (1 scroll, 1 statue, 1 jewelry)
+- **Taj Mahal**: 3 collectibles (1 jewelry, 1 picture, 1 scroll)
+
+## Related Models
+
+- [ArtifactData](/api/artifact-data) - Used for generating image URLs
+- [WonderData](/api/wonder-data) - References collectibles through `hiddenArtifacts`
+- HighlightData - Similar structure for featured (non-hidden) artifacts

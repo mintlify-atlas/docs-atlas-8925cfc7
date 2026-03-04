@@ -1,0 +1,315 @@
+---
+title: "WonderData"
+description: "Core data model representing a Wonder of the World with its properties, metadata, and associated content"
+---
+
+## Overview
+
+The `WonderData` class is the primary data model for representing each of the Seven Wonders of the World in the Wonderous app. It contains comprehensive information including historical data, geographic coordinates, media references, and associated artifacts.
+
+**Location:** `lib/logic/data/wonder_data.dart:5`
+
+## Class Definition
+
+```dart
+class WonderData extends Equatable {
+  const WonderData({
+    required this.type,
+    required this.title,
+    required this.subTitle,
+    required this.regionTitle,
+    this.startYr = 0,
+    this.endYr = 0,
+    this.artifactStartYr = 0,
+    this.artifactEndYr = 0,
+    this.artifactCulture = '',
+    this.artifactGeolocation = '',
+    this.lat = 0,
+    this.lng = 0,
+    this.imageIds = const [],
+    required this.unsplashCollectionId,
+    required this.pullQuote1Top,
+    required this.pullQuote1Bottom,
+    required this.pullQuote1Author,
+    this.pullQuote2 = '',
+    this.pullQuote2Author = '',
+    this.callout1 = '',
+    this.callout2 = '',
+    this.facts = const [],
+    required this.historyInfo1,
+    required this.historyInfo2,
+    required this.constructionInfo1,
+    required this.constructionInfo2,
+    required this.locationInfo1,
+    required this.locationInfo2,
+    required this.videoId,
+    this.videoCaption = '',
+    this.mapCaption = '',
+    required this.events,
+    this.highlightArtifacts = const [],
+    this.hiddenArtifacts = const [],
+    this.searchData = const [],
+    this.searchSuggestions = const [],
+  });
+}
+```
+
+## Properties
+
+### Basic Information
+
+<ResponseField name="type" type="WonderType" required>
+  The type of wonder (e.g., `WonderType.chichenItza`, `WonderType.tajMahal`)
+</ResponseField>
+
+<ResponseField name="title" type="String" required>
+  The display title of the wonder
+</ResponseField>
+
+<ResponseField name="subTitle" type="String" required>
+  A subtitle or description of the wonder
+</ResponseField>
+
+<ResponseField name="regionTitle" type="String" required>
+  The geographic region where the wonder is located
+</ResponseField>
+
+### Timeline Information
+
+<ResponseField name="startYr" type="int" default="0">
+  The year construction or establishment began
+</ResponseField>
+
+<ResponseField name="endYr" type="int" default="0">
+  The year construction or establishment ended
+</ResponseField>
+
+<ResponseField name="artifactStartYr" type="int" default="0">
+  Starting year range for related artifacts
+</ResponseField>
+
+<ResponseField name="artifactEndYr" type="int" default="0">
+  Ending year range for related artifacts
+</ResponseField>
+
+### Geographic Data
+
+<ResponseField name="lat" type="double" default="0">
+  Latitude coordinate of the wonder's location
+</ResponseField>
+
+<ResponseField name="lng" type="double" default="0">
+  Longitude coordinate of the wonder's location
+</ResponseField>
+
+### Artifact Metadata
+
+<ResponseField name="artifactCulture" type="String" default="''">
+  The culture associated with the wonder's artifacts
+</ResponseField>
+
+<ResponseField name="artifactGeolocation" type="String" default="''">
+  Geolocation description for artifact searches
+</ResponseField>
+
+### Content & Media
+
+<ResponseField name="historyInfo1" type="String" required>
+  Primary historical information text
+</ResponseField>
+
+<ResponseField name="historyInfo2" type="String" required>
+  Secondary historical information text
+</ResponseField>
+
+<ResponseField name="constructionInfo1" type="String" required>
+  Primary construction details text
+</ResponseField>
+
+<ResponseField name="constructionInfo2" type="String" required>
+  Secondary construction details text
+</ResponseField>
+
+<ResponseField name="locationInfo1" type="String" required>
+  Primary location information text
+</ResponseField>
+
+<ResponseField name="locationInfo2" type="String" required>
+  Secondary location information text
+</ResponseField>
+
+<ResponseField name="pullQuote1Top" type="String" required>
+  Top portion of the first pull quote
+</ResponseField>
+
+<ResponseField name="pullQuote1Bottom" type="String" required>
+  Bottom portion of the first pull quote
+</ResponseField>
+
+<ResponseField name="pullQuote1Author" type="String" required>
+  Author attribution for the first pull quote
+</ResponseField>
+
+<ResponseField name="pullQuote2" type="String" default="''">
+  Second pull quote text
+</ResponseField>
+
+<ResponseField name="pullQuote2Author" type="String" default="''">
+  Author attribution for the second pull quote
+</ResponseField>
+
+<ResponseField name="callout1" type="String" default="''">
+  First callout text for highlighted information
+</ResponseField>
+
+<ResponseField name="callout2" type="String" default="''">
+  Second callout text for highlighted information
+</ResponseField>
+
+<ResponseField name="videoId" type="String" required>
+  YouTube video ID for the wonder's featured video
+</ResponseField>
+
+<ResponseField name="videoCaption" type="String" default="''">
+  Caption text for the video
+</ResponseField>
+
+<ResponseField name="mapCaption" type="String" default="''">
+  Caption text for the map display
+</ResponseField>
+
+<ResponseField name="unsplashCollectionId" type="String" required>
+  Unsplash collection ID for loading related images
+</ResponseField>
+
+<ResponseField name="imageIds" type="List<String>" default="[]">
+  List of image identifiers for the wonder
+</ResponseField>
+
+<ResponseField name="facts" type="List<String>" default="[]">
+  List of interesting facts about the wonder
+</ResponseField>
+
+### Events & Artifacts
+
+<ResponseField name="events" type="Map<int, String>" required>
+  Timeline events mapped by year to event description
+</ResponseField>
+
+<ResponseField name="highlightArtifacts" type="List<String>" default="[]">
+  List of artifact IDs used for highlight displays (internal use - used to assemble HighlightData)
+</ResponseField>
+
+<ResponseField name="hiddenArtifacts" type="List<String>" default="[]">
+  List of artifact IDs used for collectible items (internal use - used to assemble CollectibleData)
+</ResponseField>
+
+### Search Functionality
+
+<ResponseField name="searchData" type="List<SearchData>" default="[]">
+  List of searchable content associated with the wonder
+</ResponseField>
+
+<ResponseField name="searchSuggestions" type="List<String>" default="[]">
+  Suggested search terms for the wonder
+</ResponseField>
+
+## Methods
+
+### titleWithBreaks
+
+```dart
+String get titleWithBreaks => title.replaceFirst(' ', '\n');
+```
+
+Returns the wonder's title with the first space replaced by a newline, useful for multi-line title displays.
+
+## WonderType Enum
+
+**Location:** `lib/logic/data/wonder_type.dart:1`
+
+```dart
+enum WonderType {
+  chichenItza,
+  christRedeemer,
+  colosseum,
+  greatWall,
+  machuPicchu,
+  petra,
+  pyramidsGiza,
+  tajMahal,
+}
+```
+
+Defines the eight wonders available in the application.
+
+## Wonder-Specific Data Classes
+
+Each wonder has its own data class that extends `WonderData` and provides specific values for that wonder.
+
+### ChichenItzaData
+
+**Location:** `lib/logic/data/wonders_data/chichen_itza_data.dart:7`
+
+```dart
+class ChichenItzaData extends WonderData {
+  ChichenItzaData()
+    : super(
+        type: WonderType.chichenItza,
+        title: \$strings.chichenItzaTitle,
+        subTitle: \$strings.chichenItzaSubTitle,
+        regionTitle: \$strings.chichenItzaRegionTitle,
+        startYr: 550,
+        endYr: 1550,
+        lat: 20.68346184201756,
+        lng: -88.56769676930931,
+        // ... additional properties
+      );
+}
+```
+
+### Similar Classes
+
+- **ChristRedeemerData** - Christ the Redeemer statue data
+- **ColosseumData** - Roman Colosseum data
+- **GreatWallData** - Great Wall of China data
+- **MachuPicchuData** - Machu Picchu data
+- **PetraData** - Petra data
+- **PyramidsGizaData** - Pyramids of Giza data
+- **TajMahalData** - Taj Mahal data
+
+All follow the same pattern of extending `WonderData` with wonder-specific values.
+
+## Usage Example
+
+```dart
+// Get wonder data for Chichen Itza
+final wonder = ChichenItzaData();
+
+// Access basic properties
+print(wonder.title); // "Chichen Itza"
+print(wonder.regionTitle); // "Yucatan Peninsula, Mexico"
+
+// Access timeline information
+print(wonder.startYr); // 550
+print(wonder.endYr); // 1550
+
+// Access geographic coordinates
+print(wonder.lat); // 20.68346184201756
+print(wonder.lng); // -88.56769676930931
+
+// Access events timeline
+wonder.events.forEach((year, description) {
+  print('$year: $description');
+});
+
+// Get title with line breaks for display
+final displayTitle = wonder.titleWithBreaks;
+```
+
+## Related Models
+
+- [ArtifactData](/api/artifact-data) - Artifact information referenced by `highlightArtifacts` and `hiddenArtifacts`
+- [TimelineData](/api/timeline-data) - Timeline events structure used in `events` property
+- [CollectibleData](/api/collectible-data) - Collectible items created from `hiddenArtifacts`
+- SearchData - Search content structure (defined in `lib/logic/data/wonders_data/search/search_data.dart`)

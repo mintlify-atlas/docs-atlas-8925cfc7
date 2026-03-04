@@ -1,0 +1,508 @@
+---
+title: Collectibles
+description: Gamified artifact collection system with persistence and home widget integration
+---
+
+The Collectibles feature adds a gamification layer, allowing users to discover and collect hidden artifacts throughout the app, with progress tracking and native home widget integration.
+
+## Collectible States
+
+Collectibles can exist in three states:
+
+```dart lib/logic/data/collectible_data.dart
+class CollectibleState {
+  static const int lost = 0;        // Not yet found
+  static const int discovered = 1;  // Just found, not yet viewed in detail
+  static const int explored = 2;    // Viewed in collection
+}
+```
+
+## Collectible Data Model
+
+```dart lib/logic/data/collectible_data.dart
+class CollectibleData {
+  CollectibleData({
+    required this.title,
+    required this.iconName,
+    required this.artifactId,
+    required this.wonder,
+  }) {
+    icon = AssetImage('${ImagePaths.collectibles}/$iconName.png');
+  }
+
+  final String title;
+  final String iconName;      // Icon type: jewelry, vase, statue, scroll, etc.
+  final String artifactId;    // Met Museum artifact ID
+  final WonderType wonder;    // Associated wonder
+  
+  late final ImageProvider icon;
+
+  String get id => artifactId;
+  String get subtitle => wondersLogic.getData(wonder).artifactCulture;
+  String get imageUrl => ArtifactData.getSelfHostedImageUrl(id);
+  String get imageUrlSmall => ArtifactData.getSelfHostedImageUrlSmall(id);
+}
+```
+
+## Collectibles Per Wonder
+
+Each wonder has 3 hidden collectibles (24 total):
+
+```dart lib/logic/data/collectible_data.dart
+List<CollectibleData> collectiblesData = [
+  // Great Wall (3 collectibles)
+  CollectibleData(
+    title: 'Biographies of Lian Po and Lin Xiangru',
+    wonder: WonderType.greatWall,
+    artifactId: '39918',
+    iconName: 'scroll',
+  ),
+  CollectibleData(
+    title: 'Jar with Dragon',
+    wonder: WonderType.greatWall,
+    artifactId: '39666',
+    iconName: 'vase',
+  ),
+  CollectibleData(
+    title: 'Panel with Peonies and Butterfly',
+    wonder: WonderType.greatWall,
+    artifactId: '39735',
+    iconName: 'textile',
+  ),
+  
+  // Taj Mahal (3 collectibles)
+  CollectibleData(
+    title: 'Dagger with Scabbard',
+    wonder: WonderType.tajMahal,
+    artifactId: '24907',
+    iconName: 'jewelry',
+  ),
+  // ... 21 more collectibles
+];
+```
+
+### Icon Types
+
+- `jewelry` - Pendants, ornaments, daggers
+- `vase` - Jars, bowls, vessels
+- `statue` - Figurines, sculptures
+- `scroll` - Documents, calligraphy, papyrus
+- `textile` - Fabrics, tapestries
+- `picture` - Paintings, photographs
+
+## Collectibles Logic
+
+The `CollectiblesLogic` class manages the collection system:
+
+```dart lib/logic/collectibles_logic.dart
+class CollectiblesLogic with ThrottledSaveLoadMixin {
+  @override
+  String get fileName => 'collectibles.dat';
+
+  /// All collectibles
+  final List<CollectibleData> all = collectiblesData;
+
+  /// Current state for each collectible (lost/discovered/explored)
+  late final statesById = ValueNotifier<Map<String, int>>({})..addListener(_updateCounts);
+
+  int _discoveredCount = 0;
+  int get discoveredCount => _discoveredCount;
+
+  int _exploredCount = 0;
+  int get exploredCount => _exploredCount;
+
+  late final _nativeWidget = GetIt.I<NativeWidgetService>();
+
+  void init() => _nativeWidget.init();
+
+  /// Get collectible by ID
+  CollectibleData? fromId(String? id) => 
+    id == null ? null : all.firstWhereOrNull((o) => o.id == id);
+
+  /// Get all collectibles for a specific wonder
+  List<CollectibleData> forWonder(WonderType wonder) {
+    return all.where((o) => o.wonder == wonder).toList(growable: false);
+  }
+}
+```
+
+## State Management
+
+### Setting State
+
+```dart lib/logic/collectibles_logic.dart
+void setState(String id, int state) {
+  Map<String, int> states = Map.of(statesById.value);
+  states[id] = state;
+  statesById.value = states;
+  
+  // Update home widget when discovered
+  if (state == CollectibleState.discovered) {
+    final data = fromId(id)!;
+    _updateNativeHomeWidgetData(
+      title: data.title,
+      id: data.id,
+      imageUrl: data.imageUrlSmall,
+    );
+  }
+  
+  scheduleSave();  // Persist to disk
+}
+```
+
+### Tracking Counts
+
+```dart
+void _updateCounts() {
+  _discoveredCount = _exploredCount = 0;
+  
+  statesById.value.forEach((_, state) {
+    if (state == CollectibleState.discovered) _discoveredCount++;
+    if (state == CollectibleState.explored) _exploredCount++;
+  });
+  
+  final foundCount = discoveredCount + exploredCount;
+  _nativeWidget.save<int>('discoveredCount', foundCount).then((value) {
+    _nativeWidget.markDirty();  // Update home widget
+  });
+}
+```
+
+## Persistence
+
+Collectibles state is saved to disk using the `ThrottledSaveLoadMixin`:
+
+```dart
+@override
+void copyFromJson(Map<String, dynamic> value) {
+  Map<String, int> states = {};
+  for (int i = 0; i < all.length; i++) {
+    String id = all[i].id;
+    states[id] = value[id] ?? CollectibleState.lost;
+  }
+  statesById.value = states;
+}
+
+@override
+Map<String, dynamic> toJson() => statesById.value;
+```
+
+**Features:**
+- Automatic throttled saves (prevents excessive disk writes)
+- JSON serialization
+- Loads on app start
+- Persists across app restarts
+- File: `collectibles.dat`
+
+## Discovery Mechanism
+
+Collectibles are discovered through exploration:
+
+### Photo Gallery Discovery
+
+One collectible hidden in each wonder's photo gallery:
+
+```dart lib/ui/screens/photo_gallery/photo_gallery.dart
+int _getCollectibleIndex() {
+  return switch (widget.wonderType) {
+    WonderType.chichenItza || WonderType.petra => 0,
+    WonderType.colosseum || WonderType.pyramidsGiza => _gridSize - 1,
+    WonderType.christRedeemer || WonderType.machuPicchu => _imgCount - 1,
+    WonderType.greatWall || WonderType.tajMahal => _imgCount - _gridSize,
+  };
+}
+
+bool _checkCollectibleIndex(int index) {
+  return index == _getCollectibleIndex() && 
+    collectiblesLogic.isLost(widget.wonderType, 1);
+}
+```
+
+When user navigates to the collectible grid position:
+
+```dart
+if (_checkCollectibleIndex(index)) {
+  return HiddenCollectible(
+    widget.wonderType,
+    index: 1,  // Second collectible for this wonder
+    size: 100,
+  );
+}
+```
+
+### Hidden Collectible Widget
+
+Displays an animated collectible icon that users can tap:
+
+```dart
+class HiddenCollectible extends StatelessWidget {
+  final WonderType wonderType;
+  final int index;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final collectibles = collectiblesLogic.forWonder(wonderType);
+    if (index >= collectibles.length) return SizedBox.shrink();
+    
+    final collectible = collectibles[index];
+    final isLost = collectiblesLogic.isLost(wonderType, index);
+    
+    if (!isLost) return SizedBox.shrink();  // Already found
+    
+    return GestureDetector(
+      onTap: () => _handleDiscovery(context, collectible),
+      child: AnimatedIcon(
+        icon: collectible.icon,
+        size: size,
+      ).maybeAnimate().shimmer(),  // Shimmer effect to attract attention
+    );
+  }
+  
+  void _handleDiscovery(BuildContext context, CollectibleData collectible) {
+    collectiblesLogic.setState(collectible.id, CollectibleState.discovered);
+    
+    // Show celebration screen
+    context.go(ScreenPaths.collectibleFound(collectible.id));
+  }
+}
+```
+
+## Collectible Found Screen
+
+When a collectible is discovered, a celebration screen appears:
+
+```dart lib/ui/screens/collectible_found/collectible_found_screen.dart
+class CollectibleFoundScreen extends StatelessWidget {
+  final String collectibleId;
+
+  @override
+  Widget build(BuildContext context) {
+    final collectible = collectiblesLogic.fromId(collectibleId);
+    
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Celebration particles
+          _CelebrationParticles(),
+          
+          // Animated ribbon
+          _AnimatedRibbon(),
+          
+          // Collectible image and info
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Collectible Found!', style: titleStyle),
+                Gap(16),
+                Image.network(
+                  collectible.imageUrlSmall,
+                  width: 200,
+                  height: 200,
+                ),
+                Gap(16),
+                Text(collectible.title, style: bodyStyle),
+                Gap(8),
+                Text(collectible.subtitle, style: captionStyle),
+                Gap(32),
+                AppBtn.primary(
+                  onPressed: () => _viewInCollection(context, collectible),
+                  child: Text('View in Collection'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+### Celebration Effects
+
+- **Particles**: Confetti-like particles rain down
+- **Ribbon**: Animated ribbon unfurls
+- **Haptics**: Success haptic feedback
+- **Sound**: Optional sound effect
+
+## Collection Screen
+
+The collection screen displays all collectibles:
+
+```dart lib/ui/screens/collection/collection_screen.dart
+class CollectionScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: collectiblesLogic.statesById,
+      builder: (context, states, _) {
+        return Column(
+          children: [
+            _CollectionHeader(
+              discovered: collectiblesLogic.discoveredCount,
+              explored: collectiblesLogic.exploredCount,
+              total: collectiblesLogic.all.length,
+            ),
+            Expanded(
+              child: _CollectionList(
+                collectibles: collectiblesLogic.all,
+                states: states,
+              ),
+            ),
+            _CollectionFooter(),
+          ],
+        );
+      },
+    );
+  }
+}
+```
+
+### Collection List
+
+Grouped by wonder:
+
+```dart
+class _CollectionList extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: WonderType.values.map((wonder) {
+        final collectibles = collectiblesLogic.forWonder(wonder);
+        final wonderData = wondersLogic.getData(wonder);
+        
+        return ExpansionTile(
+          title: Text(wonderData.title),
+          children: collectibles.map((c) => _CollectionListCard(
+            collectible: c,
+            state: states[c.id] ?? CollectibleState.lost,
+          )).toList(),
+        );
+      }).toList(),
+    );
+  }
+}
+```
+
+### Collection Card States
+
+```dart
+class _CollectionListCard extends StatelessWidget {
+  final CollectibleData collectible;
+  final int state;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: _buildIcon(),
+      title: Text(
+        state == CollectibleState.lost ? '???' : collectible.title,
+      ),
+      subtitle: Text(
+        state == CollectibleState.lost ? 'Undiscovered' : collectible.subtitle,
+      ),
+      trailing: _buildStateIndicator(),
+      onTap: state != CollectibleState.lost ? () => _viewDetails() : null,
+    );
+  }
+}
+```
+
+## Home Widget Integration
+
+### Updating Home Widget
+
+```dart
+Future<void> _updateNativeHomeWidgetData({
+  String title = '',
+  String id = '',
+  String imageUrl = '',
+}) async {
+  if (!_nativeWidget.isSupported) return;
+  
+  // Save title
+  await _nativeWidget.save<String>('lastDiscoveredTitle', title);
+  
+  // Get subtitle from artifact data
+  String subTitle = '';
+  if (id.isNotEmpty) {
+    final artifactData = await artifactLogic.getArtifactByID(id);
+    subTitle = artifactData?.date ?? '';
+  }
+  await _nativeWidget.save<String>('lastDiscoveredSubTitle', subTitle);
+  
+  // Download and encode image to base64
+  String imageBase64 = '';
+  if (imageUrl.isNotEmpty) {
+    var bytes = await http.readBytes(Uri.parse(imageUrl));
+    imageBase64 = base64Encode(bytes);
+  }
+  await _nativeWidget.save<String>('lastDiscoveredImageData', imageBase64);
+  
+  // Mark widget as needing update
+  await _nativeWidget.markDirty();
+}
+```
+
+### Home Widget Data
+
+- **lastDiscoveredTitle**: Collectible name
+- **lastDiscoveredSubTitle**: Artifact date
+- **lastDiscoveredImageData**: Base64 encoded image
+- **discoveredCount**: Total found count
+
+## Reset Functionality
+
+```dart
+void reset() {
+  Map<String, int> states = {};
+  for (int i = 0; i < all.length; i++) {
+    states[all[i].id] = CollectibleState.lost;
+  }
+  _updateNativeHomeWidgetData();  // Clear home widget
+  statesById.value = states;
+  scheduleSave();
+}
+```
+
+## Query Methods
+
+```dart
+// Check if collectible is still lost
+bool isLost(WonderType wonderType, int i) {
+  final datas = forWonder(wonderType);
+  final states = statesById.value;
+  if (datas.length > i && states.containsKey(datas[i].id)) {
+    return states[datas[i].id] == CollectibleState.lost;
+  }
+  return true;
+}
+
+// Get first discovered (not explored) collectible
+CollectibleData? getFirstDiscoveredOrNull() {
+  List<CollectibleData> discovered = [];
+  statesById.value.forEach((key, value) {
+    if (value == CollectibleState.discovered) discovered.add(fromId(key)!);
+  });
+  
+  // Return in wonder order
+  for (var w in wondersLogic.all) {
+    for (var d in discovered) {
+      if (d.wonder == w.type) return d;
+    }
+  }
+  return null;
+}
+```
+
+## User Experience Flow
+
+1. **Discovery**: User explores photo gallery and finds hidden collectible
+2. **Celebration**: Collectible Found screen with animations
+3. **State Change**: Collectible marked as "discovered"
+4. **Home Widget**: Updates to show latest find
+5. **Collection View**: User can view in collection
+6. **State Change**: When viewed in detail, marked as "explored"
+7. **Progress**: Total progress updates (e.g., "18/24 collected")

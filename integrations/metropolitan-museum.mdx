@@ -1,0 +1,281 @@
+---
+title: 'Metropolitan Museum Integration'
+description: 'Learn how Wonderous integrates with the Metropolitan Museum of Art API to display historical artifacts'
+---
+
+## Overview
+
+Wonderous integrates with the Metropolitan Museum of Art (MET) Collection API to fetch and display historical artifacts related to each wonder. The integration provides users with additional cultural context by showcasing museum artifacts connected to the civilizations that created these wonders.
+
+## API Documentation
+
+The integration uses the MET Collection API:
+
+**Base URL**: `https://collectionapi.metmuseum.org/public/collection/v1`
+
+**Official Documentation**: [https://metmuseum.github.io/](https://metmuseum.github.io/)
+
+<Info>
+The MET Collection API is free and does not require authentication, making it ideal for public-facing applications.
+</Info>
+
+## Architecture
+
+The Metropolitan Museum integration consists of three main layers:
+
+### 1. ArtifactAPIService
+
+The service layer handles all HTTP requests to the MET API.
+
+```dart lib/logic/artifact_api_service.dart
+class ArtifactAPIService {
+  final String _baseMETUrl = 'https://collectionapi.metmuseum.org/public/collection/v1';
+  final String _baseSelfHostedUrl = 'https://www.wonderous.info/met';
+
+  Future<ServiceResult<ArtifactData?>> getMetObjectByID(String id) async {
+    HttpResponse? response = await HttpClient.send('$_baseMETUrl/objects/$id');
+    return ServiceResult<ArtifactData?>(response, _parseArtifactData);
+  }
+
+  Future<ServiceResult<ArtifactData?>> getSelfHostedObjectByID(String id) async {
+    HttpResponse? response = await HttpClient.send('$_baseSelfHostedUrl/$id.json');
+    return ServiceResult<ArtifactData?>(response, _parseArtifactData);
+  }
+}
+```
+
+**Key methods:**
+- `getMetObjectByID(String id)`: Fetches artifact data directly from MET API
+- `getSelfHostedObjectByID(String id)`: Fetches from self-hosted cache for faster loading
+
+### 2. ArtifactAPILogic
+
+The logic layer manages caching and business logic for artifact retrieval.
+
+```dart lib/logic/artifact_api_logic.dart
+class ArtifactAPILogic {
+  final HashMap<String, ArtifactData?> _artifactCache = HashMap();
+
+  ArtifactAPIService get service => GetIt.I.get<ArtifactAPIService>();
+
+  Future<ArtifactData?> getArtifactByID(String id, {bool selfHosted = false}) async {
+    if (_artifactCache.containsKey(id)) return _artifactCache[id];
+    
+    ServiceResult<ArtifactData?> result = await (
+      selfHosted
+        ? service.getSelfHostedObjectByID(id)
+        : service.getMetObjectByID(id)
+    );
+    
+    if (!result.success) throw $strings.artifactDetailsErrorNotFound(id);
+    
+    ArtifactData? artifact = result.content;
+    return _artifactCache[id] = artifact;
+  }
+}
+```
+
+**Features:**
+- In-memory caching using `HashMap` to avoid duplicate API calls
+- Supports both MET API and self-hosted artifact data
+- Error handling with localized error messages
+- Dependency injection via GetIt
+
+### 3. ArtifactData Model
+
+The data model represents a museum artifact with comprehensive metadata.
+
+```dart lib/logic/data/artifact_data.dart
+class ArtifactData {
+  ArtifactData({
+    required this.objectId,
+    required this.title,
+    required this.image,
+    required this.date,
+    required this.period,
+    required this.country,
+    required this.medium,
+    required this.dimension,
+    required this.classification,
+    required this.culture,
+    required this.objectType,
+    required this.objectBeginYear,
+    required this.objectEndYear,
+  });
+
+  final String objectId;
+  final String title;
+  final String image;
+  final int objectBeginYear;
+  final int objectEndYear;
+  final String objectType;
+  final String date;
+  final String period;
+  final String country;
+  final String medium;
+  final String dimension;
+  final String classification;
+  final String culture;
+}
+```
+
+## Data Parsing
+
+The service parses the MET API response into `ArtifactData`:
+
+```dart
+ArtifactData? _parseArtifactData(Map<String, dynamic> content) {
+  return ArtifactData(
+    objectId: content['objectID'].toString(),
+    title: content['title'] ?? '',
+    image: content['primaryImage'] ?? '',
+    date: content['objectDate'] ?? '',
+    objectType: content['objectName'] ?? '',
+    period: content['period'] ?? '',
+    country: content['country'] ?? '',
+    medium: content['medium'] ?? '',
+    dimension: content['dimension'] ?? '',
+    classification: content['classification'] ?? '',
+    culture: content['culture'] ?? '',
+    objectBeginYear: content['objectBeginDate'],
+    objectEndYear: content['objectEndDate'],
+  );
+}
+```
+
+The parser handles missing fields gracefully with null coalescing operators, ensuring the app doesn't crash if the API returns incomplete data.
+
+## Image URLs
+
+Artifact images are available in multiple sizes:
+
+```dart
+static const String baseSelfHostedImagePath = 'https://www.wonderous.info/met/';
+
+String get selfHostedImageUrl => getSelfHostedImageUrl(objectId);
+String get selfHostedImageUrlSmall => getSelfHostedImageUrlSmall(objectId);
+String get selfHostedImageUrlMedium => getSelfHostedImageUrlMedium(objectId);
+
+static String getSelfHostedImageUrl(String id) => 
+  '$baseSelfHostedImagePath$id.jpg';
+  
+static String getSelfHostedImageUrlSmall(String id) => 
+  '$baseSelfHostedImagePath${id}_600.jpg';
+  
+static String getSelfHostedImageUrlMedium(String id) => 
+  '$baseSelfHostedImagePath${id}_2000.jpg';
+```
+
+**Image sizes:**
+- **Full**: Original resolution (`{id}.jpg`)
+- **Small**: 600px width (`{id}_600.jpg`)
+- **Medium**: 2000px width (`{id}_2000.jpg`)
+
+## Caching Strategy
+
+The integration uses a two-tier caching approach:
+
+### 1. In-Memory Cache
+
+```dart
+final HashMap<String, ArtifactData?> _artifactCache = HashMap();
+```
+
+Artifacts are cached in memory during the app session to avoid redundant API calls.
+
+### 2. Self-Hosted Cache
+
+Frequently accessed artifacts are pre-downloaded and hosted at `wonderous.info/met/` for:
+- Faster loading times
+- Reduced API calls
+- Offline capability
+- Better reliability
+
+## API Response Structure
+
+The MET API returns JSON with the following structure:
+
+```json
+{
+  "objectID": 123456,
+  "title": "Artifact Title",
+  "primaryImage": "https://images.metmuseum.org/...",
+  "objectDate": "ca. 2000 B.C.",
+  "objectName": "Bowl",
+  "period": "Old Kingdom",
+  "country": "Egypt",
+  "medium": "Limestone",
+  "dimensions": "H. 10 cm, Diam. 15 cm",
+  "classification": "Stone-Vessels",
+  "culture": "Egyptian",
+  "objectBeginDate": -2000,
+  "objectEndDate": -1900
+}
+```
+
+## Search Functionality
+
+While the current service focuses on retrieving specific artifacts by ID, the app includes artifact search capabilities:
+
+- Search by wonder/civilization
+- Filter by artifact type
+- Browse curated collections
+- View artifact details
+
+The search functionality is implemented in:
+- `lib/ui/screens/artifact/artifact_search/artifact_search_screen.dart`
+- `lib/_tools/artifact_search_helper.dart`
+
+## Error Handling
+
+```dart
+if (!result.success) throw $strings.artifactDetailsErrorNotFound(id);
+```
+
+The integration uses localized error messages for better user experience:
+- API connection failures
+- Artifact not found (404)
+- Invalid response data
+- Network timeouts
+
+## Usage Example
+
+```dart
+// Get artifact by ID from MET API
+final artifact = await artifactLogic.getArtifactByID('123456');
+
+// Get artifact from self-hosted cache
+final cachedArtifact = await artifactLogic.getArtifactByID(
+  '123456',
+  selfHosted: true
+);
+
+// Access artifact properties
+if (artifact != null) {
+  print(artifact.title);
+  print(artifact.culture);
+  print(artifact.period);
+  print(artifact.selfHostedImageUrlSmall);
+}
+```
+
+## Performance Optimization
+
+<Tip>
+The app prioritizes performance through:
+- In-memory caching to avoid duplicate API calls
+- Self-hosted image CDN for faster loading
+- Progressive image loading (small → medium → full)
+- Lazy loading of artifact details
+</Tip>
+
+## Related Files
+
+- `lib/logic/artifact_api_service.dart` - REST API service layer
+- `lib/logic/artifact_api_logic.dart` - Business logic and caching
+- `lib/logic/data/artifact_data.dart` - Artifact data model
+- `lib/ui/screens/artifact/artifact_search/artifact_search_screen.dart` - Search UI
+- `lib/ui/screens/artifact/artifact_details/artifact_details_screen.dart` - Detail view
+- `lib/ui/screens/artifact/artifact_carousel/artifact_carousel_screen.dart` - Carousel view
+- `lib/_tools/artifact_search_helper.dart` - Search utilities
+- `lib/_tools/artifact_download_helper.dart` - Caching utilities

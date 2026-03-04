@@ -1,0 +1,480 @@
+---
+title: "Animations"
+description: "Flutter Animate integration, custom transitions, and performance optimizations"
+---
+
+## Overview
+
+Wonderous leverages the powerful `flutter_animate` package (v4.5.0) to create smooth, expressive animations throughout the app. The animation system is designed with performance in mind and includes built-in support for disabling animations for accessibility.
+
+## Flutter Animate Integration
+
+The app uses [flutter_animate](https://pub.dev/packages/flutter_animate) as its primary animation framework (`pubspec.yaml:26`):
+
+```yaml
+dependencies:
+  flutter_animate: ^4.5.0
+```
+
+The package is exported globally via `common_libs.dart:11`:
+
+```dart
+export 'package:flutter_animate/flutter_animate.dart';
+```
+
+## Animation Durations
+
+Standardized timing values ensure consistent motion (`lib/styles/styles.dart:197-204`):
+
+```dart
+class _Times {
+  late final Duration fast = 300.animateMs;      // Quick transitions
+  late final Duration med = 600.animateMs;        // Standard animations
+  late final Duration slow = 900.animateMs;       // Deliberate motion
+  late final Duration extraSlow = 1300.animateMs; // Dramatic effects
+  late final Duration pageTransition = 200.animateMs; // Page changes
+}
+```
+
+Access via: `$styles.times.med`
+
+## Duration Extensions
+
+Custom extensions provide millisecond shortcuts (`lib/ui/common/utils/duration_utils.dart:3-6`):
+
+```dart
+extension DurationExtensions on int {
+  Duration get delayMs => $styles.disableAnimations 
+    ? 0.ms 
+    : Duration(milliseconds: this);
+    
+  Duration get animateMs => $styles.disableAnimations 
+    ? 1.ms 
+    : Duration(milliseconds: this);
+}
+```
+
+Usage:
+
+```dart
+300.animateMs  // Duration(milliseconds: 300)
+500.delayMs    // Duration(milliseconds: 500)
+```
+
+When animations are disabled, `delayMs` returns `0.ms` and `animateMs` returns `1.ms` to prevent delays while maintaining animation structure.
+
+## Animation Control
+
+### Disable Animations
+
+The app supports disabling animations for accessibility (`lib/styles/styles.dart:10,28`):
+
+```dart
+AppStyle({
+  Size? screenSize,
+  this.disableAnimations = false,
+  this.highContrast = false,
+})
+```
+
+This affects:
+- All duration values (via `DurationExtensions`)
+- The `maybeAnimate()` extension
+- Animation playback throughout the app
+
+### MaybeAnimate Extension
+
+Conditional animation wrapper (`lib/logic/common/animate_utils.dart:16-45`):
+
+```dart
+extension MaybeAnimateExtension on Widget {
+  Animate maybeAnimate({
+    Key? key,
+    List<Effect>? effects,
+    AnimateCallback? onInit,
+    AnimateCallback? onPlay,
+    AnimateCallback? onComplete,
+    bool? autoPlay,
+    Duration? delay,
+    AnimationController? controller,
+    Adapter? adapter,
+    double? target,
+    double? value,
+  }) => $styles.disableAnimations
+      ? NeverAnimate(child: this)  // Returns child directly
+      : Animate(/* standard animation */);
+}
+```
+
+When `disableAnimations` is true, the `NeverAnimate` widget simply returns the child without animation overhead.
+
+## Common Animation Patterns
+
+### Fade In
+
+```dart
+Text('Hello').maybeAnimate().fadeIn(
+  duration: $styles.times.fast,
+  curve: Curves.easeOut,
+)
+```
+
+### Fade with Delay
+
+```dart
+Container(
+  child: content,
+).maybeAnimate(
+  delay: 150.delayMs,
+  duration: 600.animateMs,
+).fade()
+```
+
+### Slide Transition
+
+```dart
+widget.maybeAnimate(
+  delay: 1500.delayMs
+).fadeIn().slide(
+  begin: Offset(0.2, 0),
+  curve: Curves.easeOut,
+)
+```
+
+### Shimmer Effect
+
+Used for collectible items to draw attention:
+
+```dart
+Image.asset(icon)
+  .maybeAnimate(onPlay: (controller) => controller.repeat())
+  .shimmer(
+    delay: 4000.delayMs,
+    duration: $styles.times.med * 3,
+  )
+  .shake(curve: Curves.easeInOutCubic, hz: 4)
+  .scale(begin: Offset(1, 1), end: Offset(1.1, 1.1))
+```
+
+### Swap Transition
+
+Cross-fade between widgets:
+
+```dart
+_buildIntro(context).animate().swap(
+  builder: (_, __) => _buildContent(),
+  duration: $styles.times.med,
+)
+```
+
+## Custom Animation Effects
+
+### Custom Tweens
+
+Wonderous implements custom animation effects using `CustomEffect` (`lib/ui/screens/home/widgets/_animated_arrow_button.dart:11-54`):
+
+```dart
+class _AnimatedArrowButton extends StatelessWidget {
+  // Fade out then fade in
+  final _fadeOutIn = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween(begin: 1, end: 0), weight: .5),
+    TweenSequenceItem(tween: Tween(begin: 0, end: 1), weight: .5),
+  ]);
+
+  // Hold position then slide down
+  final _slideDown = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween(begin: 1, end: 1), weight: .5),
+    TweenSequenceItem(tween: Tween(begin: -1, end: 1), weight: .5),
+  ]);
+
+  @override
+  Widget build(BuildContext context) {
+    return Animate(
+      effects: [
+        CustomEffect(
+          builder: _buildOpacityTween,
+          duration: $styles.times.med,
+          curve: Curves.easeOut,
+        ),
+        CustomEffect(
+          builder: _buildSlideTween,
+          duration: $styles.times.med,
+          curve: Curves.easeOut,
+        ),
+      ],
+      child: Icon(Icons.chevron_right),
+    );
+  }
+
+  Widget _buildOpacityTween(BuildContext _, double value, Widget child) {
+    final opacity = _fadeOutIn.evaluate(AlwaysStoppedAnimation(value));
+    return Opacity(opacity: opacity, child: child);
+  }
+
+  Widget _buildSlideTween(BuildContext _, double value, Widget child) {
+    double yOffset = _slideDown.evaluate(AlwaysStoppedAnimation(value));
+    return Align(alignment: Alignment(0, -1 + yOffset * 2), child: child);
+  }
+}
+```
+
+This creates an arrow that:
+1. Fades to transparent
+2. Jumps to a new position (hidden)
+3. Slides back up while fading in
+
+### Toggle Animations
+
+Conditional animations based on state:
+
+```dart
+Animate().toggle(
+  builder: (_, value, __) => value 
+    ? Container(/* shown state */)
+    : Container(/* hidden state */),
+)
+```
+
+## Performance Optimizations
+
+### Impeller Rendering
+
+Wonderous uses Flutter's new Impeller rendering engine on iOS (`README.md:39-41`):
+
+```markdown
+### Impeller Rendering
+
+This app uses the new Impeller Runtime by default on iOS.
+```
+
+Impeller provides:
+- Predictable performance (no shader compilation jank)
+- Smoother animations
+- Better GPU utilization
+- Reduced frame drops
+
+To enable Impeller on other platforms, configure in your app:
+
+```dart
+// Automatically enabled on iOS
+// For Android, add to AndroidManifest.xml:
+<meta-data
+  android:name="io.flutter.embedding.android.EnableImpeller"
+  android:value="true" />
+```
+
+### Animation Optimization Strategies
+
+#### 1. Conditional Rendering
+
+Only animate when visible:
+
+```dart
+if (isVisible) {
+  widget.maybeAnimate().fadeIn();
+}
+```
+
+#### 2. RepaintBoundary
+
+Isolate expensive animations:
+
+```dart
+RepaintBoundary(
+  child: AnimatedWidget(...),
+)
+```
+
+#### 3. Const Constructors
+
+Use const for static animation parameters:
+
+```dart
+effects: const [FadeEffect()],  // Const when possible
+```
+
+#### 4. Animation Keys
+
+Prevent unnecessary rebuilds:
+
+```dart
+widget.maybeAnimate(
+  key: ValueKey(artifact.artifactId),
+).fadeIn()
+```
+
+#### 5. Controller Reuse
+
+Share controllers when animating multiple related widgets:
+
+```dart
+final controller = AnimationController(...);
+
+Animate(
+  controller: controller,
+  effects: [...],
+)
+```
+
+## Built-in Effects
+
+Flutter Animate provides numerous effects used throughout Wonderous:
+
+### Visual Effects
+
+- **FadeEffect** - Opacity transitions
+- **SlideEffect** - Position changes
+- **ScaleEffect** - Size transformations
+- **ShimmerEffect** - Glossy highlight sweep
+- **ShakeEffect** - Vibration/wiggle
+- **BlurEffect** - Gaussian blur in/out
+- **TintEffect** - Color overlay
+
+### Composite Effects
+
+Chain multiple effects:
+
+```dart
+widget
+  .animate()
+  .fadeIn(duration: 300.animateMs)
+  .slide(begin: Offset(0, 0.2))
+  .scale(begin: Offset(0.8, 0.8))
+```
+
+## Animation Examples from Wonderous
+
+### Collectible Discovery
+
+Complex animation sequence when discovering artifacts:
+
+```dart
+_buildIntro(context)
+  .animate()
+  .swap(
+    delay: $styles.times.med,
+    builder: (_, __) => _buildContent(),
+  )
+  .animate()
+  .fadeIn(
+    delay: $styles.times.slow,
+    duration: $styles.times.med,
+  )
+```
+
+### Page Transitions
+
+Smooth transitions between screens:
+
+```dart
+pageTransitionsTheme: PageTransitionsTheme(
+  builders: {
+    TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+    TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+  },
+)
+```
+
+### Timeline Events
+
+Staggered entrance animations:
+
+```dart
+effects: [
+  FadeEffect(),
+  SlideEffect(begin: Offset(0, -.1)),
+],
+```
+
+## Best Practices
+
+### 1. Use Semantic Durations
+
+Prefer named durations over magic numbers:
+
+```dart
+// Good
+duration: $styles.times.fast
+
+// Avoid
+duration: Duration(milliseconds: 300)
+```
+
+### 2. Respect Accessibility
+
+Always use `maybeAnimate()` instead of `Animate()` directly:
+
+```dart
+// Good - respects disableAnimations setting
+widget.maybeAnimate().fadeIn()
+
+// Avoid - always animates
+widget.animate().fadeIn()
+```
+
+### 3. Chain Thoughtfully
+
+Excessive animation can be distracting:
+
+```dart
+// Good - purposeful
+widget.fadeIn().slide()
+
+// Avoid - overwhelming
+widget.fadeIn().slide().scale().rotate().shimmer().shake()
+```
+
+### 4. Match Platform Conventions
+
+Use platform-appropriate curves:
+
+```dart
+// iOS - use easeOut, easeInOut
+curve: Curves.easeOut
+
+// Android - use fastOutSlowIn, easeInOut
+curve: Curves.fastOutSlowIn
+```
+
+### 5. Test Performance
+
+Monitor frame rates during animation:
+
+```dart
+import 'package:flutter/rendering.dart';
+
+void main() {
+  debugPaintSizeEnabled = false;
+  debugRepaintRainbowEnabled = false; // Enable to see repaints
+  runApp(MyApp());
+}
+```
+
+## Debugging Animations
+
+### Enable Slow Animations
+
+```dart
+timeDilation = 5.0; // Slow down 5x for debugging
+```
+
+### Visual Debugging
+
+Flutter DevTools provides:
+- Performance overlay
+- Repaint rainbow
+- Timeline profiler
+- Widget inspector
+
+Access via:
+```bash
+flutter run --profile
+# Then open DevTools in browser
+```
+
+## Resources
+
+- [flutter_animate package](https://pub.dev/packages/flutter_animate)
+- [Flutter Animations Documentation](https://docs.flutter.dev/ui/animations)
+- [Impeller Rendering Engine](https://docs.flutter.dev/perf/impeller)
+- [Material Motion Guidelines](https://m3.material.io/styles/motion)

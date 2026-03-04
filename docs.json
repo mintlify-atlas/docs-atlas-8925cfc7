@@ -1,122 +1,126 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Wonderous",
+  "theme": "almond",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#E4935D",
+    "light": "#F8ECE5",
+    "dark": "#1E1B18"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/gskinnerTeam/flutter-wonderous-app"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/gskinnerTeam/flutter-wonderous-app"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quick-start"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/wonders",
+              "features/timeline",
+              "features/artifacts",
+              "features/photo-gallery",
+              "features/collectibles"
             ]
           },
           {
             "group": "Customization",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "customization/theming",
+              "customization/localization",
+              "customization/animations"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Integrations",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "integrations/unsplash",
+              "integrations/google-maps",
+              "integrations/metropolitan-museum"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Architecture",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Overview",
             "pages": [
-              "api-reference/introduction"
+              "architecture/overview",
+              "architecture/project-structure",
+              "architecture/state-management"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Core Systems",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "architecture/routing",
+              "architecture/data-models",
+              "architecture/logic-layer",
+              "architecture/ui-components"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "architecture/platform-specific",
+              "architecture/performance",
+              "architecture/accessibility"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Logic Classes",
+            "pages": [
+              "api/app-logic",
+              "api/wonders-logic",
+              "api/timeline-logic",
+              "api/collectibles-logic",
+              "api/artifact-logic"
+            ]
+          },
+          {
+            "group": "Data Models",
+            "pages": [
+              "api/wonder-data",
+              "api/artifact-data",
+              "api/collectible-data",
+              "api/timeline-data"
+            ]
+          },
+          {
+            "group": "UI Components",
+            "pages": [
+              "api/screens",
+              "api/common-widgets",
+              "api/wonder-illustrations"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

@@ -1,0 +1,397 @@
+---
+title: Data Models
+description: Core data structures for wonders, artifacts, collectibles, and timeline events
+---
+
+## Overview
+
+Wonderous uses immutable data classes to represent the core domain models. All data models are located in `lib/logic/data/` and use Dart's `const` constructors for performance.
+
+## WonderData
+
+`WonderData` is the primary model representing a wonder of the world. It contains all information needed to display a wonder across the app.
+
+### Structure
+
+```dart
+class WonderData extends Equatable {
+  const WonderData({
+    required this.type,
+    required this.title,
+    required this.subTitle,
+    required this.regionTitle,
+    this.startYr = 0,
+    this.endYr = 0,
+    this.artifactStartYr = 0,
+    this.artifactEndYr = 0,
+    this.artifactCulture = '',
+    this.artifactGeolocation = '',
+    this.lat = 0,
+    this.lng = 0,
+    this.imageIds = const [],
+    required this.unsplashCollectionId,
+    required this.pullQuote1Top,
+    required this.pullQuote1Bottom,
+    required this.pullQuote1Author,
+    this.pullQuote2 = '',
+    this.pullQuote2Author = '',
+    this.callout1 = '',
+    this.callout2 = '',
+    this.facts = const [],
+    required this.historyInfo1,
+    required this.historyInfo2,
+    required this.constructionInfo1,
+    required this.constructionInfo2,
+    required this.locationInfo1,
+    required this.locationInfo2,
+    required this.videoId,
+    this.videoCaption = '',
+    this.mapCaption = '',
+    required this.events,
+    this.highlightArtifacts = const [],
+    this.hiddenArtifacts = const [],
+    this.searchData = const [],
+    this.searchSuggestions = const [],
+  });
+}
+```
+
+### Key Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | `WonderType` | Unique identifier enum for the wonder |
+| `title` | `String` | Display name (e.g., "Great Wall of China") |
+| `subTitle` | `String` | Secondary descriptor |
+| `regionTitle` | `String` | Geographic region |
+| `startYr` / `endYr` | `int` | Construction date range |
+| `lat` / `lng` | `double` | Geographic coordinates |
+| `imageIds` | `List<String>` | Asset identifiers for images |
+| `unsplashCollectionId` | `String` | Unsplash API collection ID |
+| `historyInfo1` / `historyInfo2` | `String` | Historical narrative text |
+| `constructionInfo1` / `constructionInfo2` | `String` | Construction details |
+| `locationInfo1` / `locationInfo2` | `String` | Location information |
+| `pullQuote1Top` / `pullQuote1Bottom` | `String` | Featured quote text |
+| `pullQuote1Author` | `String` | Quote attribution |
+| `facts` | `List<String>` | Quick facts list |
+| `videoId` | `String` | YouTube video identifier |
+| `events` | `Map<int, String>` | Timeline events (year -> description) |
+| `highlightArtifacts` | `List<String>` | Featured artifact IDs |
+| `hiddenArtifacts` | `List<String>` | Collectible artifact IDs |
+| `searchData` | `List<SearchData>` | Search index data |
+| `searchSuggestions` | `List<String>` | Search suggestions |
+
+### Computed Properties
+
+```dart
+String get titleWithBreaks => title.replaceFirst(' ', '\n');
+```
+
+### Wonder-Specific Data
+
+Each wonder has its own data file in `lib/logic/data/wonders_data/`:
+- `chichen_itza_data.dart`
+- `christ_redeemer_data.dart`
+- `colosseum_data.dart`
+- `great_wall_data.dart`
+- `machu_picchu_data.dart`
+- `petra_data.dart`
+- `pyramids_giza_data.dart`
+- `taj_mahal_data.dart`
+
+## WonderType
+
+`WonderType` is an enum that identifies each wonder:
+
+```dart
+enum WonderType {
+  chichenItza,
+  christRedeemer,
+  colosseum,
+  greatWall,
+  machuPicchu,
+  petra,
+  pyramidsGiza,
+  tajMahal,
+}
+```
+
+## ArtifactData
+
+`ArtifactData` represents artifacts from the Metropolitan Museum of Art API:
+
+```dart
+class ArtifactData {
+  ArtifactData({
+    required this.objectId,
+    required this.title,
+    required this.image,
+    required this.date,
+    required this.period,
+    required this.country,
+    required this.medium,
+    required this.dimension,
+    required this.classification,
+    required this.culture,
+    required this.objectType,
+    required this.objectBeginYear,
+    required this.objectEndYear,
+  });
+}
+```
+
+### Key Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `objectId` | `String` | MET API identifier |
+| `title` | `String` | Artifact name |
+| `image` | `String` | Primary image URL |
+| `objectBeginYear` / `objectEndYear` | `int` | Creation date range |
+| `objectType` | `String` | Type (coin, vase, etc.) |
+| `date` | `String` | Human-readable date |
+| `period` | `String` | Historical period |
+| `country` | `String` | Country of origin |
+| `medium` | `String` | Material/medium |
+| `dimension` | `String` | Physical dimensions |
+| `classification` | `String` | Category |
+| `culture` | `String` | Cultural origin |
+
+### Image URLs
+
+Artifacts have multiple image size options:
+
+```dart
+static const String baseSelfHostedImagePath = 'https://www.wonderous.info/met/';
+
+String get selfHostedImageUrl => getSelfHostedImageUrl(objectId);
+String get selfHostedImageUrlSmall => getSelfHostedImageUrlSmall(objectId);
+String get selfHostedImageUrlMedium => getSelfHostedImageUrlMedium(objectId);
+
+static String getSelfHostedImageUrl(String id) => '$baseSelfHostedImagePath$id.jpg';
+static String getSelfHostedImageUrlSmall(String id) => '$baseSelfHostedImagePath${id}_600.jpg';
+static String getSelfHostedImageUrlMedium(String id) => '$baseSelfHostedImagePath${id}_2000.jpg';
+```
+
+## CollectibleData
+
+`CollectibleData` represents hidden artifacts that users can discover:
+
+```dart
+class CollectibleData {
+  CollectibleData({
+    required this.title,
+    required this.iconName,
+    required this.artifactId,
+    required this.wonder,
+  }) {
+    icon = AssetImage('${ImagePaths.collectibles}/$iconName.png');
+  }
+
+  final String title;
+  final String iconName;
+  late final ImageProvider icon;
+  final String artifactId;
+  final WonderType wonder;
+
+  String get id => artifactId;
+  String get subtitle => wondersLogic.getData(wonder).artifactCulture;
+  String get imageUrl => ArtifactData.getSelfHostedImageUrl(id);
+  String get imageUrlSmall => ArtifactData.getSelfHostedImageUrlSmall(id);
+}
+```
+
+### Collectible States
+
+```dart
+class CollectibleState {
+  static const int lost = 0;
+  static const int discovered = 1;
+  static const int explored = 2;
+}
+```
+
+### Data Definition
+
+Collectibles are defined as a global list:
+
+```dart
+List<CollectibleData> collectiblesData = [
+  CollectibleData(
+    title: 'Pendant',
+    wonder: WonderType.chichenItza,
+    artifactId: '701645',
+    iconName: 'jewelry',
+  ),
+  // ... more collectibles
+];
+```
+
+## HighlightData
+
+`HighlightData` represents featured artifacts displayed on wonder detail pages:
+
+```dart
+class HighlightData {
+  HighlightData({
+    required this.title,
+    required this.culture,
+    required this.artifactId,
+    required this.wonder,
+    required this.date,
+  });
+
+  final String title;
+  final String culture;
+  final String date;
+  final String artifactId;
+  final WonderType wonder;
+
+  String get id => artifactId;
+  String get subtitle => wondersLogic.getData(wonder).artifactCulture;
+  String get imageUrl => ArtifactData.getSelfHostedImageUrl(artifactId);
+  String get imageUrlSmall => ArtifactData.getSelfHostedImageUrlSmall(artifactId);
+
+  static HighlightData? fromId(String? id) => 
+    id == null ? null : _highlights.firstWhereOrNull((o) => o.id == id);
+  
+  static List<HighlightData> forWonder(WonderType wonder) =>
+    _highlights.where((o) => o.wonder == wonder).toList(growable: false);
+  
+  static List<HighlightData> get all => _highlights;
+}
+```
+
+## TimelineData
+
+`TimelineData` provides global historical events for the timeline feature:
+
+```dart
+class TimelineEvent {
+  TimelineEvent(this.year, this.description);
+  final int year;
+  final String description;
+}
+
+class GlobalEventsData {
+  final globalEvents = [
+    TimelineEvent(-2900, $strings.timelineEvent2900bce),
+    TimelineEvent(-2700, $strings.timelineEvent2700bce),
+    // ... more events
+  ];
+}
+```
+
+### Wonder-Specific Events
+
+Each `WonderData` contains its own events map:
+
+```dart
+final Map<int, String> events; // year -> description
+```
+
+## UnsplashPhotoData
+
+`UnsplashPhotoData` represents photos from the Unsplash API:
+
+```dart
+class UnsplashPhotoData {
+  final String id;
+  final String description;
+  final String altDescription;
+  final String urls;
+  final String username;
+  final String userLink;
+}
+```
+
+## Data Access Patterns
+
+### Accessing Wonder Data
+
+```dart
+// Get data for a specific wonder
+WonderData data = wondersLogic.getData(WonderType.chichenItza);
+
+// Access all wonders
+List<WonderData> allWonders = wondersLogic.all;
+```
+
+### Accessing Collectibles
+
+```dart
+// Get collectibles for a wonder
+List<CollectibleData> collectibles = collectiblesLogic.forWonder(WonderType.petra);
+
+// Get collectible by ID
+CollectibleData? collectible = collectiblesLogic.fromId('701645');
+
+// Get all collectibles
+List<CollectibleData> all = collectiblesLogic.all;
+```
+
+### Accessing Highlights
+
+```dart
+// Get highlights for a wonder
+List<HighlightData> highlights = HighlightData.forWonder(WonderType.greatWall);
+
+// Get highlight by ID
+HighlightData? highlight = HighlightData.fromId('503940');
+
+// Get all highlights
+List<HighlightData> allHighlights = HighlightData.all;
+```
+
+## Immutability
+
+All data models use `const` constructors and `final` fields to ensure immutability:
+
+```dart
+const WonderData(
+  type: WonderType.petra,
+  title: 'Petra',
+  // ...
+);
+```
+
+This provides:
+- **Performance**: Dart can optimize const objects
+- **Predictability**: Data can't be accidentally modified
+- **Safety**: No side effects from data mutations
+
+## Equatable
+
+`WonderData` extends `Equatable` for value-based equality:
+
+```dart
+class WonderData extends Equatable {
+  // ...
+  @override
+  List<Object?> get props => [type, title, historyInfo1, imageIds, facts];
+}
+```
+
+This enables:
+- Efficient comparison of wonder instances
+- Use in collections (Set, Map)
+- State management optimizations
+
+## Best Practices
+
+1. **Immutability**: Always use `const` constructors and `final` fields
+2. **Type Safety**: Use enums (`WonderType`) instead of strings for identifiers
+3. **Computed Properties**: Use getters for derived data (`titleWithBreaks`, `imageUrl`)
+4. **Static Methods**: Provide static factory methods for lookups (`fromId`, `forWonder`)
+5. **Null Safety**: Use nullable types where appropriate and provide null-safe accessors
+6. **Constants**: Define magic numbers and paths as named constants
+
+## Related Files
+
+- `lib/logic/data/wonder_data.dart` - WonderData model
+- `lib/logic/data/wonder_type.dart` - WonderType enum
+- `lib/logic/data/artifact_data.dart` - ArtifactData model
+- `lib/logic/data/collectible_data.dart` - CollectibleData model and data
+- `lib/logic/data/highlight_data.dart` - HighlightData model and data
+- `lib/logic/data/timeline_data.dart` - Timeline event models
+- `lib/logic/data/wonders_data/` - Wonder-specific data files

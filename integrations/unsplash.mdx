@@ -1,0 +1,173 @@
+---
+title: 'Unsplash Integration'
+description: 'Learn how Wonderous integrates with Unsplash API to fetch and display high-quality wonder photos'
+---
+
+## Overview
+
+Wonderous integrates with the Unsplash API to fetch high-quality photos for each wonder. The integration uses the `unsplash_client` package and provides a service layer for managing photo collections and caching.
+
+<Note>
+The Unsplash integration is currently used only for development tools. Production builds use pre-downloaded, self-hosted images for better performance and reliability.
+</Note>
+
+## Package Used
+
+```yaml pubspec.yaml
+unsplash_client: ^3.0.0
+```
+
+The `unsplash_client` package provides a Flutter-friendly interface to the Unsplash API, handling authentication, requests, and data parsing.
+
+## Architecture
+
+The Unsplash integration consists of three main components:
+
+### 1. UnsplashService
+
+The service layer handles all API communication with Unsplash.
+
+```dart lib/logic/unsplash_service.dart
+class UnsplashService {
+  final client = UnsplashClient(
+    settings: ClientSettings(
+      credentials: AppCredentials(
+        accessKey: unsplashAccessKey,
+        secretKey: unsplashSecretKey,
+      ),
+    ),
+  );
+
+  Future<List<String>?> loadCollectionPhotos(String id) async {
+    final photo = await client.collections.photos(id, page: 1, perPage: 25).go();
+    final data = photo.data;
+    if (data == null) return null;
+    return data.map((e) => e.id).toList();
+  }
+
+  Future<UnsplashPhotoData?> loadInfo(String id) async {
+    final photo = await client.photos.get(id).go();
+    final data = photo.data;
+    if (data == null) {
+      throw ('Photo did not load. statusCode=${photo.statusCode}');
+    }
+    return UnsplashPhotoData(id: id, url: '${data.urls.raw}');
+  }
+}
+```
+
+**Key methods:**
+- `loadCollectionPhotos(String id)`: Fetches up to 25 photos from a collection
+- `loadInfo(String id)`: Retrieves detailed information for a specific photo
+
+### 2. UnsplashLogic
+
+The logic layer manages photo collections and provides access to the service.
+
+```dart lib/logic/unsplash_logic.dart
+class UnsplashLogic {
+  final Map<String, List<String>> _idsByCollection = UnsplashPhotoData.photosByCollectionId;
+
+  UnsplashService get service => GetIt.I.get<UnsplashService>();
+
+  List<String>? getCollectionPhotos(String collectionId) => _idsByCollection[collectionId];
+}
+```
+
+This class uses dependency injection (GetIt) to access the service and maintains a mapping of collection IDs to photo IDs.
+
+### 3. UnsplashPhotoData
+
+The data model represents photo information and URL generation.
+
+```dart lib/logic/data/unsplash_photo_data.dart
+class UnsplashPhotoData {
+  UnsplashPhotoData({
+    required this.id,
+    required this.url,
+  });
+  
+  final String id;
+  final String url;
+
+  String getUnsplashUrl(int size) => '$url?q=90&fm=jpg&w=$size&fit=max';
+
+  static String getSelfHostedUrl(String id, UnsplashPhotoSize targetSize) {
+    int size = switch (targetSize) {
+      UnsplashPhotoSize.med => 400,
+      UnsplashPhotoSize.large => 800,
+      UnsplashPhotoSize.xl => 1200,
+    };
+    if (PlatformInfo.pixelRatio >= 1.5 || PlatformInfo.isDesktop) {
+      size *= 2;
+    }
+    return 'https://www.wonderous.info/unsplash/$id-$size.jpg';
+  }
+}
+```
+
+## Photo Collections
+
+Each wonder has a dedicated Unsplash collection. The collections are pre-mapped in `UnsplashPhotoData.photosByCollectionId`, which contains:
+
+- Collection IDs as keys
+- Lists of 24 photo IDs as values
+
+This mapping is generated using development tools and embedded in the app for offline access.
+
+## Image Optimization
+
+The integration supports multiple image sizes for optimal performance:
+
+### Photo Sizes
+
+```dart
+enum UnsplashPhotoSize { med, large, xl }
+```
+
+- **med**: 400px (800px on high-DPI/desktop)
+- **large**: 800px (1600px on high-DPI/desktop)
+- **xl**: 1200px (2400px on high-DPI/desktop)
+
+### URL Generation
+
+Images can be served from two sources:
+
+1. **Unsplash CDN**: `getUnsplashUrl(int size)` generates dynamic Unsplash URLs with quality and size parameters
+2. **Self-hosted**: `getSelfHostedUrl()` points to pre-downloaded images on `wonderous.info` for production use
+
+## Development vs Production
+
+<Warning>
+The Unsplash API is **not used in production builds**. All photos are pre-downloaded and self-hosted for:
+- Faster loading times
+- Reduced API costs
+- Offline capability
+- Better reliability
+</Warning>
+
+The integration remains in the codebase to support:
+- Development tools
+- Photo collection management
+- Future content updates
+
+## API Authentication
+
+The service uses Unsplash API credentials:
+
+```dart
+String unsplashAccessKey = 'dxqHsX7IOURA5hfh0fuhL-cuX6q2-5DqghC77mnmrAU';
+String unsplashSecretKey = 'yTDPsxt6soBmcym7shd24t4vlYYDcOnzWyJ07O3UyEY';
+```
+
+<Warning>
+These keys are for development purposes only. In a real-world scenario, API keys should be stored securely and not committed to source control.
+</Warning>
+
+## Related Files
+
+- `lib/logic/unsplash_logic.dart` - Main logic layer
+- `lib/logic/unsplash_service.dart` - API service implementation  
+- `lib/logic/data/unsplash_photo_data.dart` - Data models and collections
+- `lib/_tools/unsplash_download_service.dart` - Development tool for downloading photos
+- `lib/ui/common/unsplash_photo.dart` - UI component for displaying photos

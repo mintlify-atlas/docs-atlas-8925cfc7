@@ -1,0 +1,392 @@
+---
+title: Artifacts
+description: Browse and search artifacts from the Metropolitan Museum of Art API
+---
+
+The Artifacts feature integrates with the Metropolitan Museum of Art Collection API to display historical artifacts related to each wonder, with search and filtering capabilities.
+
+## Metropolitan Museum Integration
+
+The app connects to the Met's public API to fetch artifact data:
+
+```dart lib/logic/artifact_api_service.dart
+class ArtifactAPIService {
+  final String _baseMETUrl = 'https://collectionapi.metmuseum.org/public/collection/v1';
+  final String _baseSelfHostedUrl = 'https://www.wonderous.info/met';
+
+  Future<ServiceResult<ArtifactData?>> getMetObjectByID(String id) async {
+    HttpResponse? response = await HttpClient.send('$_baseMETUrl/objects/$id');
+    return ServiceResult<ArtifactData?>(response, _parseArtifactData);
+  }
+
+  Future<ServiceResult<ArtifactData?>> getSelfHostedObjectByID(String id) async {
+    HttpResponse? response = await HttpClient.send('$_baseSelfHostedUrl/$id.json');
+    return ServiceResult<ArtifactData?>(response, _parseArtifactData);
+  }
+
+  ArtifactData? _parseArtifactData(Map<String, dynamic> content) {
+    // Source: https://metmuseum.github.io/
+    return ArtifactData(
+      objectId: content['objectID'].toString(),
+      title: content['title'] ?? '',
+      image: content['primaryImage'] ?? '',
+      date: content['objectDate'] ?? '',
+      objectType: content['objectName'] ?? '',
+      period: content['period'] ?? '',
+      country: content['country'] ?? '',
+      medium: content['medium'] ?? '',
+      dimension: content['dimension'] ?? '',
+      classification: content['classification'] ?? '',
+      culture: content['culture'] ?? '',
+      objectBeginYear: content['objectBeginDate'],
+      objectEndYear: content['objectEndDate'],
+    );
+  }
+}
+```
+
+## Artifact Data Model
+
+The `ArtifactData` class represents museum artifacts:
+
+```dart lib/logic/data/artifact_data.dart
+class ArtifactData {
+  ArtifactData({
+    required this.objectId,
+    required this.title,
+    required this.image,
+    required this.date,
+    required this.period,
+    required this.country,
+    required this.medium,
+    required this.dimension,
+    required this.classification,
+    required this.culture,
+    required this.objectType,
+    required this.objectBeginYear,
+    required this.objectEndYear,
+  });
+  
+  static const String baseSelfHostedImagePath = 'https://www.wonderous.info/met/';
+
+  final String objectId;        // Artifact ID from MET
+  final String title;           // Artifact title/name
+  final String image;           // Primary image URL
+  final int objectBeginYear;    // Creation year start
+  final int objectEndYear;      // Creation year end
+  final String objectType;      // Type (coin, vase, cup, etc.)
+  final String date;            // Date of creation
+  final String period;          // Historical period
+  final String country;         // Country of origin
+  final String medium;          // Art medium
+  final String dimension;       // Physical dimensions
+  final String classification;  // Artifact classification
+  final String culture;         // Associated culture
+
+  String get selfHostedImageUrl => getSelfHostedImageUrl(objectId);
+  String get selfHostedImageUrlSmall => getSelfHostedImageUrlSmall(objectId);
+  String get selfHostedImageUrlMedium => getSelfHostedImageUrlMedium(objectId);
+
+  static String getSelfHostedImageUrl(String id) => '$baseSelfHostedImagePath$id.jpg';
+  static String getSelfHostedImageUrlSmall(String id) => '$baseSelfHostedImagePath${id}_600.jpg';
+  static String getSelfHostedImageUrlMedium(String id) => '$baseSelfHostedImagePath${id}_2000.jpg';
+}
+```
+
+## Artifact API Logic
+
+The `ArtifactAPILogic` class manages artifact fetching with caching:
+
+```dart lib/logic/artifact_api_logic.dart
+class ArtifactAPILogic {
+  final HashMap<String, ArtifactData?> _artifactCache = HashMap();
+
+  ArtifactAPIService get service => GetIt.I.get<ArtifactAPIService>();
+
+  /// Returns artifact data by ID. Returns null if artifact cannot be found.
+  Future<ArtifactData?> getArtifactByID(String id, {bool selfHosted = false}) async {
+    // Check cache first
+    if (_artifactCache.containsKey(id)) return _artifactCache[id];
+    
+    // Fetch from API
+    ServiceResult<ArtifactData?> result = await (selfHosted
+        ? service.getSelfHostedObjectByID(id)
+        : service.getMetObjectByID(id));
+    
+    if (!result.success) throw 'Artifact not found: $id';
+    
+    // Cache and return
+    ArtifactData? artifact = result.content;
+    return _artifactCache[id] = artifact;
+  }
+}
+```
+
+### Caching Strategy
+
+- **In-Memory Cache**: Uses `HashMap` to store fetched artifacts
+- **Session-Level**: Cache persists during app session
+- **Prevents Redundant Requests**: Same artifact ID only fetched once
+- **Fast Lookups**: O(1) complexity for cached items
+
+## Artifact Search Screen
+
+The search interface allows users to find artifacts by keyword and time range:
+
+```dart lib/ui/screens/artifact/artifact_search/artifact_search_screen.dart
+class ArtifactSearchScreen extends StatefulWidget {
+  final WonderType type;
+
+  @override
+  State<ArtifactSearchScreen> createState() => _ArtifactSearchScreenState();
+}
+
+class _ArtifactSearchScreenState extends State<ArtifactSearchScreen> {
+  List<SearchData> _searchResults = [];
+  List<SearchData> _filteredResults = [];
+  String _query = '';
+  
+  late final WonderData wonder = wondersLogic.getData(widget.type);
+  late double _startYear = wonder.artifactStartYr * 1.0;
+  late double _endYear = wonder.artifactEndYr * 1.0;
+
+  void _handleSearchSubmitted(String query) {
+    _query = query;
+    _updateResults();
+  }
+
+  void _updateResults() {
+    if (_query.isEmpty) {
+      _searchResults = wonder.searchData;
+    } else {
+      // Whole word search on title and keywords
+      final RegExp q = RegExp('\\b${_query}s?\\b', caseSensitive: false);
+      _searchResults = wonder.searchData.where((o) => 
+        o.title.contains(q) || o.keywords.contains(q)
+      ).toList();
+    }
+    _updateFilter();
+  }
+
+  void _updateFilter() {
+    _filteredResults = _searchResults.where((o) => 
+      o.year >= _startYear && o.year <= _endYear
+    ).toList();
+    setState(() {});
+  }
+}
+```
+
+## Search Functionality
+
+### Text Search
+
+```dart
+void _handleSearchSubmitted(String query) {
+  _query = query;
+  
+  if (_query.isEmpty) {
+    _searchResults = wonder.searchData;  // Show all
+  } else {
+    // Regex whole-word search
+    final RegExp q = RegExp('\\b${_query}s?\\b', caseSensitive: false);
+    _searchResults = wonder.searchData.where((o) => 
+      o.title.contains(q) || o.keywords.contains(q)
+    ).toList();
+  }
+}
+```
+
+**Features:**
+- Case-insensitive matching
+- Whole word boundaries (`\b`)
+- Optional plural forms (`s?`)
+- Searches both title and keywords
+
+### Time Range Filtering
+
+The expanding time range selector allows filtering by creation date:
+
+```dart lib/ui/screens/artifact/artifact_search/time_range_selector/expanding_time_range_selector.dart
+class ExpandingTimeRangeSelector extends StatefulWidget {
+  final WonderData wonder;
+  final double startYear;
+  final double endYear;
+  final PanelController panelController;
+  final SearchVizController vizController;
+  final Function(double start, double end) onChanged;
+}
+```
+
+**Time Range Features:**
+- Visual timeline with artifact distribution
+- Draggable range handles
+- Histogram showing artifact density by year
+- Smooth animations when adjusting range
+- Default range from wonder's `artifactStartYr` to `artifactEndYr`
+
+### Search Visualization
+
+```dart
+class SearchVizController extends ChangeNotifier {
+  final int minYear;
+  final int maxYear;
+  Color color;
+  
+  List<SearchData> _value;
+  List<SearchData> get value => _value;
+  set value(List<SearchData> value) {
+    _value = value;
+    notifyListeners();  // Always notify on assignment
+  }
+}
+```
+
+Visualizes search results distribution across the timeline.
+
+## Results Grid
+
+Search results display in a responsive staggered grid:
+
+```dart
+class _ResultsGrid extends StatelessWidget {
+  final List<SearchData> searchResults;
+  final Function(SearchData) onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return MasonryGridView.count(
+      crossAxisCount: _getCrossAxisCount(context),
+      itemCount: searchResults.length,
+      itemBuilder: (context, index) {
+        final result = searchResults[index];
+        return _ResultTile(
+          data: result,
+          onPressed: () => onPressed(result),
+        );
+      },
+    );
+  }
+  
+  int _getCrossAxisCount(BuildContext context) {
+    if (context.widthPx > 1200) return 4;
+    if (context.widthPx > 800) return 3;
+    return 2;
+  }
+}
+```
+
+### Result Tiles
+
+Each artifact displays as an image card with title overlay:
+
+```dart
+class _ResultTile extends StatelessWidget {
+  final SearchData data;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBtn.basic(
+      onPressed: onPressed,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Artifact image
+          AspectRatio(
+            aspectRatio: 1,
+            child: Image.network(
+              ArtifactData.getSelfHostedImageUrlSmall(data.id),
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Title overlay
+          Padding(
+            padding: EdgeInsets.all(8),
+            child: Text(
+              data.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+## Highlight Artifacts
+
+Each wonder features curated highlight artifacts:
+
+```dart lib/logic/data/highlight_data.dart
+class HighlightData {
+  final String title;
+  final String culture;
+  final String date;
+  final String artifactId;
+  final WonderType wonder;
+
+  static List<HighlightData> forWonder(WonderType wonder) =>
+    _highlights.where((o) => o.wonder == wonder).toList();
+}
+```
+
+**Example: Great Wall Highlights**
+
+```dart
+HighlightData(
+  title: 'Jar with Dragon',
+  wonder: WonderType.greatWall,
+  artifactId: '39666',
+  culture: 'China',
+  date: 'early 15th century',
+),
+HighlightData(
+  title: 'Panel with Peonies and Butterfly',
+  wonder: WonderType.greatWall,
+  artifactId: '39735',
+  culture: 'China',
+  date: 'early 15th century',
+),
+```
+
+## Artifact Details View
+
+Tapping an artifact opens a detailed view:
+
+- High-resolution image
+- Full metadata (title, date, culture, medium, dimensions)
+- Classification and period information
+- Link to Met Museum website
+- Related artifacts suggestions
+
+## Performance Optimizations
+
+- **Image Caching**: Network images cached automatically
+- **Lazy Loading**: Grid items built on-demand
+- **Debounced Search**: Text input debounced to reduce API calls
+- **Self-Hosted Thumbnails**: Small images served from CDN
+- **Responsive Images**: Different sizes (600px, 2000px, full) based on context
+
+## Error Handling
+
+```dart
+Future<ArtifactData?> getArtifactByID(String id, {bool selfHosted = false}) async {
+  if (_artifactCache.containsKey(id)) return _artifactCache[id];
+  
+  ServiceResult<ArtifactData?> result = await service.getMetObjectByID(id);
+  
+  if (!result.success) {
+    throw 'Artifact not found: $id';
+  }
+  
+  return _artifactCache[id] = result.content;
+}
+```
+
+- Graceful degradation when API unavailable
+- Fallback to self-hosted data
+- User-friendly error messages
+- Retry logic for failed requests

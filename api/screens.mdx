@@ -1,0 +1,250 @@
+---
+title: "Screens"
+description: "Main application screens in the Wonderous app"
+---
+
+## Overview
+
+The Wonderous app contains several primary screens that make up the core user experience. These screens handle navigation between wonders, detailed information display, timeline visualization, artifact browsing, and collectible management.
+
+## Main Screens
+
+### HomeScreen
+
+**Location:** `lib/ui/screens/home/wonders_home_screen.dart`
+
+The home screen displays a horizontally scrollable list of wonders with parallax background and foreground effects.
+
+**Key Features:**
+- Horizontal PageView with infinite scrolling
+- Parallax layered illustrations (background, middleground, foreground)
+- Vertical swipe gesture to navigate to wonder details
+- Wonder type selection via menu
+- Animated transitions and visual effects
+- Page indicator for navigation
+
+**State Management:**
+```dart
+class HomeScreen extends StatefulWidget with GetItStatefulWidgetMixin
+```
+
+**Key Properties:**
+- `_pageController`: PageController for horizontal scrolling
+- `_wonderIndex`: Current wonder index
+- `_swipeController`: Handles vertical swipe interactions
+- `_fadeAnims`: Animation controllers for fade transitions
+
+**Navigation:**
+- Swipe up → Navigate to WonderDetailsScreen
+- Swipe left/right → Navigate between wonders
+- Menu button → Open HomeMenu for direct wonder selection
+
+---
+
+### WonderDetailsScreen
+
+**Location:** `lib/ui/screens/wonder_details/wonders_details_screen.dart`
+
+Displays detailed information about a specific wonder across multiple tabs.
+
+**Key Features:**
+- Tab-based navigation (Editorial, Photos, Artifacts, Events)
+- Lazy-loaded content using LazyIndexedStack
+- Responsive layout with navigation rail support
+- Dynamic padding based on tab menu size
+
+**Constructor:**
+```dart
+WonderDetailsScreen({
+  required this.type,      // WonderType
+  this.tabIndex = 0,       // Initial tab index
+})
+```
+
+**Tabs:**
+1. **Editorial** - Wonder information and description
+2. **Photo Gallery** - Images from Unsplash
+3. **Artifacts** - Related artifacts carousel
+4. **Events** - Historical events timeline
+
+**State:**
+- `_tabController`: Manages tab navigation (length: 4)
+- `_tabBarSize`: Dynamic size calculation for responsive layout
+- `_useNavRail`: Boolean for layout mode (horizontal vs vertical tabs)
+
+---
+
+### TimelineScreen
+
+**Location:** `lib/ui/screens/timeline/timeline_screen.dart`
+
+Interactive vertical timeline showing global historical events and wonder-specific milestones.
+
+**Key Features:**
+- Vertically scrolling timeline (1200-5500px range)
+- Year markers and era text (Classical, Modern, etc.)
+- Event cards with popup details
+- Bottom scrubber for quick navigation
+- Dashed line dividers with year labels
+- Filterable by wonder type
+
+**Constructor:**
+```dart
+TimelineScreen({
+  required this.type,  // Optional WonderType for filtering
+})
+```
+
+**Components:**
+- `_ScrollingViewport`: Main timeline with events
+- `_AnimatedEraText`: Displays current historical era
+- `_BottomScrubber`: Horizontal mini-timeline for navigation
+- `_EventMarkers`: Visual indicators for events
+- `_YearMarkers`: Year labels along the timeline
+
+**State:**
+- `_scroller`: ScrollController for timeline navigation
+- `_year`: `ValueNotifier<int>` for current year display
+
+---
+
+### ArtifactSearchScreen
+
+**Location:** `lib/ui/screens/artifact/artifact_search/artifact_search_screen.dart`
+
+Searchable grid of artifacts from the Metropolitan Museum of Art API, filtered by name and time range.
+
+**Key Features:**
+- Text search by artifact name/keywords
+- Time range filtering with visual selector
+- Staggered grid layout for results
+- Search visualization controller
+- Real-time filtering and updates
+
+**Constructor:**
+```dart
+ArtifactSearchScreen({
+  required this.type,  // WonderType
+})
+```
+
+**Key Components:**
+- `_SearchInput`: Text field for keyword search
+- `_ResultsGrid`: Staggered grid of artifact tiles
+- `ExpandingTimeRangeSelector`: Panel for date range filtering
+- `_ResultTile`: Individual artifact preview
+
+**State:**
+- `_searchResults`: Full search results list
+- `_filteredResults`: Results after time range filter
+- `_query`: Current search query string
+- `_startYear` / `_endYear`: Time range boundaries
+- `panelController`: Controls visibility of time range panel
+- `vizController`: Manages search visualization
+
+**Search Logic:**
+```dart
+void _handleSearchSubmitted(String query)
+void _handleTimelineChanged(double start, double end)
+void _updateResults()  // Regex-based keyword search
+void _updateFilter()   // Apply time range filter
+```
+
+---
+
+### CollectionScreen
+
+**Location:** `lib/ui/screens/collection/collection_screen.dart`
+
+Displays user's collected items (hidden collectibles found throughout the app).
+
+**Key Features:**
+- List of all collectibles with discovered/explored/locked states
+- Auto-scroll to newly discovered items
+- Progress tracking footer
+- Reset collection functionality
+- State persistence via CollectiblesLogic
+
+**Constructor:**
+```dart
+CollectionScreen({
+  required this.fromId,  // ID of collectible to scroll to
+})
+```
+
+**Components:**
+- `_CollectionList`: Scrollable list of collectible cards
+- `_CollectionListCard`: Individual collectible display
+- `_CollectibleImage`: Image with state-based styling
+- `_NewlyDiscoveredItemsBtn`: Badge showing new discoveries
+- `_CollectionFooter`: Progress counter
+
+**State Tracking:**
+- Discovered count: Items found but not viewed in collection
+- Explored count: Items viewed in collection screen
+- Total count: All available collectibles
+
+**Methods:**
+```dart
+void _scrollToTarget([bool animate = true])  // Scroll to specific item
+void _handleReset()  // Reset all collection progress
+```
+
+---
+
+## Screen Structure
+
+All screens follow a consistent structure:
+
+1. **Header** - AppHeader component with title/subtitle
+2. **Content Area** - Main scrollable content
+3. **Navigation** - Back buttons and navigation controls
+4. **Overlays** - Modals and floating UI elements
+
+## Navigation Patterns
+
+**Screen Paths:**
+```dart
+ScreenPaths.home                           // HomeScreen
+ScreenPaths.wonderDetails(type, tabIndex)  // WonderDetailsScreen
+ScreenPaths.timeline(type)                 // TimelineScreen
+ScreenPaths.search(type)                   // ArtifactSearchScreen
+ScreenPaths.collection(fromId)             // CollectionScreen
+ScreenPaths.artifact(id)                   // ArtifactDetailsScreen
+```
+
+**Navigation Methods:**
+- `context.go(path)` - Navigate to route
+- `context.pop()` - Go back
+- `appLogic.showFullscreenDialogRoute()` - Show dialog overlay
+
+## Common Screen Features
+
+### State Management
+All screens use `GetItStatefulWidgetMixin` for dependency injection:
+```dart
+class MyScreen extends StatefulWidget with GetItStatefulWidgetMixin
+```
+
+### Responsive Design
+- Screens adapt to different screen sizes
+- Navigation rail support for larger displays
+- Dynamic insets and padding via `$styles`
+
+### Accessibility
+- Semantic labels for screen readers
+- Keyboard navigation support
+- Focus management
+- Live regions for dynamic content
+
+### Performance
+- RepaintBoundary for complex animations
+- Lazy loading with LazyIndexedStack
+- Image caching and optimization
+- Debounced search input
+
+## Related
+
+- [Common Widgets](/api/common-widgets) - Reusable UI components
+- [Wonder Illustrations](/api/wonder-illustrations) - Custom illustration system
+- [Architecture](/architecture) - App structure and patterns

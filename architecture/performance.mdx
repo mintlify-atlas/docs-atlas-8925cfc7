@@ -1,0 +1,271 @@
+---
+title: Performance Optimizations
+description: Explore the performance strategies used in Wonderous, including rendering, caching, and deployment optimizations.
+---
+
+Wonderous employs multiple performance optimization techniques to ensure smooth rendering, fast loading times, and efficient resource usage across all platforms.
+
+## Impeller Rendering Engine
+
+Flutter's Impeller rendering engine provides hardware-accelerated graphics on iOS and Android. Wonderous is designed to take advantage of Impeller's performance benefits:
+
+- **Precompiled shaders**: Reduces runtime shader compilation stutters
+- **Metal/Vulkan backends**: Direct access to GPU for faster rendering
+- **Consistent frame times**: Eliminates first-frame jank
+
+<Note>
+  Impeller is enabled by default in Flutter 3.10+ on iOS and gradually rolling out for Android. The app runs smoothly on both the legacy renderer and Impeller.
+</Note>
+
+## High Refresh Rate with FlutterDisplayMode
+
+On Android devices that support high refresh rates (90Hz, 120Hz, 144Hz), the app automatically sets the display to the maximum available refresh rate:
+
+```dart
+// lib/logic/app_logic.dart:57
+if (!kIsWeb && PlatformInfo.isAndroid) {
+  await FlutterDisplayMode.setHighRefreshRate();
+}
+```
+
+### Benefits
+
+- Smoother animations and transitions
+- More responsive touch interactions
+- Enhanced visual experience on capable devices
+
+<Warning>
+  High refresh rates may impact battery life on mobile devices. The OS may reduce the refresh rate when the app is backgrounded.
+</Warning>
+
+## Image Caching Strategy
+
+Wonderous implements a custom image cache configuration to handle the large number of high-resolution images in the app.
+
+### AppImageCache Configuration
+
+```dart
+// lib/logic/app_logic.dart:223
+class AppImageCache extends WidgetsFlutterBinding {
+  @override
+  ImageCache createImageCache() {
+    this.imageCache.maximumSizeBytes = 250 << 20; // 250mb
+    return super.createImageCache();
+  }
+}
+```
+
+The image cache is expanded to **250MB** (from the default ~100MB) to accommodate:
+
+- Wonder illustration layers (foreground, background, sun/moon)
+- Photo gallery images
+- Artifact search results
+- Timeline event images
+
+### Cache Lifecycle
+
+Flutter's image cache uses an LRU (Least Recently Used) strategy:
+
+1. Images are cached when first loaded
+2. When cache reaches maximum size, least recently used images are evicted
+3. Cache persists for the app's lifetime but not between sessions
+
+## Precaching Strategies
+
+Wonderous uses strategic precaching to minimize loading delays during user interactions.
+
+### Web-Specific Precaching
+
+On web, images must be explicitly precached to avoid flashing during navigation:
+
+```dart
+// lib/main.dart:48
+if (!_imagesCached && kIsWeb) {
+  appLogic.precacheIcons(context);
+  appLogic.precacheWonderImages(context);
+  _imagesCached = true;
+}
+```
+
+### Icon Precaching
+
+```dart
+// lib/logic/app_logic.dart:144
+void precacheIcons(BuildContext context) {
+  List<String> urls = [];
+  for (var i = 0; i < 2; i++) {
+    urls.add('${ImagePaths.common}/tab-editorial${i == 0 ? '-active' : ''}.png');
+    urls.add('${ImagePaths.common}/tab-photos${i == 0 ? '-active' : ''}.png');
+    urls.add('${ImagePaths.common}/tab-artifacts${i == 0 ? '-active' : ''}.png');
+    urls.add('${ImagePaths.common}/tab-timeline${i == 0 ? '-active' : ''}.png');
+  }
+  // ...
+}
+```
+
+Precaches both active and inactive states of navigation icons.
+
+### Wonder Image Precaching
+
+```dart
+// lib/logic/app_logic.dart:158
+void precacheWonderImages(BuildContext context) {
+  // For each wonder:
+  // - Main illustration layers (chichen.png, foreground-left.png, etc.)
+  // - Flattened hero image
+  // - Wonder button
+  // - Photo gallery images (4 per wonder)
+}
+```
+
+Precaches critical images for all 8 wonders to ensure smooth transitions.
+
+## WASM Deployment
+
+Wonderous can be deployed as a WebAssembly (WASM) application for improved web performance:
+
+### Building for WASM
+
+```bash
+flutter build web --wasm
+```
+
+### WASM Benefits
+
+- **Faster execution**: Near-native performance for Dart code
+- **Smaller bundle size**: More efficient code representation
+- **Better optimization**: Ahead-of-time compilation benefits
+- **Improved startup time**: Faster initialization compared to JavaScript
+
+### Browser Support
+
+WASM requires modern browsers with WebAssembly support:
+
+- Chrome 87+
+- Firefox 89+
+- Safari 15+
+- Edge 87+
+
+<Note>
+  Older browsers will fall back to the JavaScript build automatically if WASM is not supported.
+</Note>
+
+## Animation Performance
+
+Wonderous uses `flutter_animate` for performant, declarative animations.
+
+### Default Animation Duration
+
+```dart
+// lib/ui/app_scaffold.dart:16
+Animate.defaultDuration = _style.times.fast; // 300ms
+```
+
+All animations default to 300ms for snappy, responsive feel.
+
+### Disabling Animations
+
+```dart
+// lib/styles/styles.dart:20
+AppStyle({
+  Size? screenSize,
+  this.disableAnimations = false, // Respects accessibility settings
+  this.highContrast = false
+})
+```
+
+The app respects the system's "reduce motion" accessibility setting.
+
+## Scroll Performance
+
+### Custom Scroll Behavior
+
+```dart
+// lib/ui/common/app_scroll_behavior.dart:8
+Set<PointerDeviceKind> get dragDevices {
+  final devices = Set<PointerDeviceKind>.from(super.dragDevices);
+  devices.add(PointerDeviceKind.mouse); // Add mouse drag on desktop
+  return devices;
+}
+```
+
+Enables mouse-based scrolling on desktop for responsive testing.
+
+### Bouncing Physics
+
+```dart
+// lib/ui/common/app_scroll_behavior.dart:17
+ScrollPhysics getScrollPhysics(BuildContext context) => const BouncingScrollPhysics();
+```
+
+Uses iOS-style bouncing physics across all platforms for consistent UX.
+
+## Layout Performance
+
+### Lazy Loading
+
+Wonderous uses lazy loading patterns to defer expensive widget builds:
+
+- `LazyIndexedStack` for tab views
+- `ListView.builder` for scrollable lists
+- Conditional rendering based on viewport visibility
+
+### Responsive Scaling
+
+```dart
+// lib/styles/styles.dart:18
+if (shortestSide > tabletXl) {
+  scale = 1.2;
+} else if (shortestSide > tabletLg) {
+  scale = 1.1;
+} else {
+  scale = 1;
+}
+```
+
+Text and spacing scale based on screen size, computed once and cached.
+
+## Build Optimization
+
+### Production Builds
+
+For optimal performance, always use release mode for production:
+
+```bash
+# Mobile
+flutter build apk --release
+flutter build ios --release
+
+# Desktop
+flutter build windows --release
+flutter build macos --release
+flutter build linux --release
+
+# Web
+flutter build web --release --wasm
+```
+
+### Key Optimizations in Release Mode
+
+- Tree shaking removes unused code
+- Minification reduces bundle size
+- Obfuscation improves code security
+- Ahead-of-time compilation for native performance
+
+## Performance Monitoring
+
+While developing, use Flutter DevTools to monitor:
+
+- **Frame rendering time**: Should stay under 16ms (60fps)
+- **Widget rebuild counts**: Minimize unnecessary rebuilds
+- **Memory usage**: Watch for memory leaks
+- **Network performance**: Monitor API calls and image loading
+
+## Best Practices
+
+1. **Precache critical assets**: Reduce first-frame jank by preloading important images
+2. **Use const constructors**: Allow Flutter to reuse widget instances
+3. **Avoid expensive builds**: Move computation out of build methods
+4. **Leverage image cache**: Configure appropriate cache size for your app's needs
+5. **Test on real devices**: Emulators/simulators don't reflect actual performance
+6. **Profile before optimizing**: Use Flutter DevTools to identify actual bottlenecks

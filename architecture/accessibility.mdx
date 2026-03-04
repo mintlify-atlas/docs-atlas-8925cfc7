@@ -1,0 +1,321 @@
+---
+title: Accessibility Features
+description: Learn how Wonderous implements accessibility features including semantics, responsive layouts, and orientation support.
+---
+
+Wonderous is designed to be accessible to all users, with comprehensive semantic labeling, responsive layouts, and support for various accessibility settings.
+
+## Semantic Labels for Web
+
+On web platforms, Flutter requires explicit initialization of the semantics tree for screen readers:
+
+```dart
+// lib/logic/app_logic.dart:50
+if (kIsWeb) {
+  // Required on web to automatically enable accessibility features
+  WidgetsFlutterBinding.ensureInitialized().ensureSemantics();
+}
+```
+
+### Why ensureSemantics() is Needed
+
+On mobile and desktop, Flutter automatically manages the semantics tree. However, on web:
+
+- Screen readers access the DOM, not native accessibility APIs
+- Flutter generates ARIA attributes from the semantics tree
+- `ensureSemantics()` forces Flutter to build and maintain the semantics tree even when no assistive technology is detected
+
+<Note>
+  This ensures that when users enable screen readers or other assistive technologies, the semantic information is immediately available.
+</Note>
+
+## Semantic Widget Usage
+
+Wonderous extensively uses Flutter's semantic widgets to provide rich accessibility information:
+
+### Button Semantics
+
+```dart
+// lib/ui/common/controls/buttons.dart:200
+return Semantics(
+  label: semanticLabel,
+  button: true,
+  container: true,
+  onTap: () => onPressed?.call(),
+  child: ExcludeSemantics(child: button),
+);
+```
+
+- `label`: Provides description for screen readers
+- `button: true`: Identifies the widget as a button
+- `container: true`: Creates a distinct semantic boundary
+- `ExcludeSemantics`: Prevents child widgets from creating redundant semantic nodes
+
+### Navigation Semantics
+
+```dart
+// lib/ui/common/controls/app_header.dart:71
+semanticLabel: backBtnSemantics,
+```
+
+Custom semantic labels for navigation elements (e.g., "Return to home" instead of just "Back").
+
+### Localized Semantics
+
+Semantic labels support multiple languages:
+
+```dart
+// lib/l10n/app_localizations_en.dart:126
+String get artifactsSemanticsPrevious => 'Previous artifact';
+String get artifactsSemanticsNext => 'Next artifact';
+
+// lib/l10n/app_localizations_zh.dart:125
+String get artifactsSemanticsPrevious => '之前的文物';
+String get artifactsSemanticsNext => '下一个文物';
+```
+
+## Semantic Control Widgets
+
+Wonderous uses several custom semantic widgets to fine-tune accessibility:
+
+### MergeSemantics
+
+Combines multiple elements into a single semantic node:
+
+```dart
+// lib/ui/screens/wonder_events/widgets/_wonder_image_with_timeline.dart:27
+return MergeSemantics(
+  child: // Complex widget with multiple interactive elements
+);
+```
+
+Useful for card-like components where the entire area should be treated as one interactive element.
+
+### ExcludeSemantics
+
+Hides decorative elements from screen readers:
+
+```dart
+// lib/ui/wonder_illustrations/common/animated_clouds.dart:153
+excludeFromSemantics: true,
+```
+
+Applied to:
+- Background illustrations
+- Decorative animations
+- Visual flourishes without semantic meaning
+
+### IgnorePointerKeepSemantics
+
+Disables interaction while preserving semantic information:
+
+```dart
+// lib/ui/common/ignore_pointer.dart:4
+class IgnorePointerKeepSemantics extends SingleChildRenderObjectWidget {
+  const IgnorePointerKeepSemantics({super.key, super.child});
+
+  @override
+  RenderIgnorePointerKeepSemantics createRenderObject(BuildContext context) {
+    return RenderIgnorePointerKeepSemantics();
+  }
+}
+```
+
+Used for visible but non-interactive elements that should still be announced by screen readers.
+
+### IgnorePointerAndSemantics
+
+Completely disables both interaction and semantics:
+
+```dart
+// lib/ui/common/ignore_pointer.dart:20
+class IgnorePointerAndSemantics extends StatelessWidget {
+  final Widget child;
+  const IgnorePointerAndSemantics({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(child: IgnorePointer(child: child));
+  }
+}
+```
+
+Used for purely decorative overlay elements.
+
+## Responsive Layouts
+
+Wonderous adapts its layout based on screen size and orientation to ensure usability across all devices.
+
+### Screen Size-Based Scaling
+
+```dart
+// lib/styles/styles.dart:15
+final shortestSide = screenSize.shortestSide;
+const tabletXl = 1000;
+const tabletLg = 800;
+if (shortestSide > tabletXl) {
+  scale = 1.2;
+} else if (shortestSide > tabletLg) {
+  scale = 1.1;
+} else {
+  scale = 1;
+}
+```
+
+**Scaling tiers:**
+- **Mobile** (< 800dp): scale = 1.0
+- **Tablet** (800-1000dp): scale = 1.1
+- **Large tablet/Desktop** (> 1000dp): scale = 1.2
+
+### MediaQuery Integration
+
+```dart
+// lib/ui/app_scaffold.dart:13
+final mq = MediaQuery.of(context);
+appLogic.handleAppSizeChanged(mq.size);
+```
+
+The app responds to MediaQuery changes, updating layouts when:
+- Device orientation changes
+- Window is resized (desktop/web)
+- Text scale factor changes (accessibility)
+
+### Responsive Text Scaling
+
+```dart
+// lib/ui/screens/home_menu/about_dialog_content.dart:54
+fontSize = MediaQuery.textScalerOf(context).scale(fontSize);
+```
+
+Respects user's system text size preferences for improved readability.
+
+## Orientation Handling
+
+Wonderous dynamically manages supported orientations based on device size.
+
+### Orientation Configuration
+
+```dart
+// lib/logic/app_logic.dart:21
+List<Axis> supportedOrientations = [Axis.vertical, Axis.horizontal];
+```
+
+Default behavior allows both portrait and landscape.
+
+### Small Device Restrictions
+
+```dart
+// lib/logic/app_logic.dart:104
+bool isSmall = display.size.shortestSide / display.devicePixelRatio < 600;
+supportedOrientations = isSmall ? [Axis.vertical] : [Axis.vertical, Axis.horizontal];
+```
+
+Devices under 600dp (typically phones) are locked to portrait for better UX.
+
+### System Orientation Updates
+
+```dart
+// lib/logic/app_logic.dart:115
+void _updateSystemOrientation() {
+  final axisList = _supportedOrientationsOverride ?? supportedOrientations;
+  final orientations = <DeviceOrientation>[];
+  if (axisList.contains(Axis.vertical)) {
+    orientations.addAll([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
+  if (axisList.contains(Axis.horizontal)) {
+    orientations.addAll([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+  SystemChrome.setPreferredOrientations(orientations);
+}
+```
+
+### Orientation Override
+
+Specific screens can override orientation restrictions:
+
+```dart
+// lib/ui/common/modals/fullscreen_video_viewer.dart:28
+appLogic.supportedOrientationsOverride = [Axis.horizontal, Axis.vertical];
+
+// lib/ui/common/modals/fullscreen_video_viewer.dart:36
+appLogic.supportedOrientationsOverride = null; // Restore default
+```
+
+Fullscreen video viewer always allows rotation regardless of device size.
+
+### Layout Detection
+
+```dart
+// lib/ui/screens/artifact/artifact_details/artifact_details_screen.dart:27
+bool hzMode = context.isLandscape;
+```
+
+Layouts use `context.isLandscape` (from `sized_context` package) to adapt UI:
+
+- **Portrait**: Vertical scrolling, stacked content
+- **Landscape**: Side-by-side panels, horizontal navigation
+
+### Navigation Rail Switching
+
+```dart
+// lib/logic/app_logic.dart:113
+bool shouldUseNavRail() => _appSize.width > _appSize.height && _appSize.height > 250;
+```
+
+In landscape mode on larger screens, bottom navigation switches to a navigation rail.
+
+## High Contrast Support
+
+```dart
+// lib/ui/app_scaffold.dart:21
+highContrast: mq.highContrast,
+```
+
+The app detects and responds to the system's high contrast accessibility setting.
+
+## Reduce Motion Support
+
+```dart
+// lib/ui/app_scaffold.dart:20
+disableAnimations: mq.disableAnimations,
+```
+
+Respects the "reduce motion" accessibility preference, disabling decorative animations when enabled.
+
+## Focus Management
+
+Custom focus handling for keyboard navigation:
+
+```dart
+// lib/ui/common/controls/buttons.dart:179
+if (focus.hasFocus)
+  Positioned.fill(
+    child: IgnorePointerAndSemantics(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular($styles.corners.md),
+          border: Border.all(color: $styles.colors.accent1, width: 3),
+        ),
+      ),
+    ),
+  ),
+```
+
+Provides visible focus indicators for keyboard navigation.
+
+## Best Practices
+
+1. **Always provide semantic labels**: Especially for buttons, icons, and interactive elements
+2. **Use ExcludeSemantics for decorative content**: Reduce noise for screen reader users
+3. **Test with screen readers**: Verify on TalkBack (Android), VoiceOver (iOS), and NVDA/JAWS (web)
+4. **Support dynamic text sizing**: Use MediaQuery.textScalerOf() to respect user preferences
+5. **Provide sufficient contrast**: Follow WCAG 2.1 AA guidelines (4.5:1 for normal text)
+6. **Enable keyboard navigation**: Ensure all interactive elements are focusable and have visible focus indicators
+7. **Test orientation changes**: Verify layouts work in both portrait and landscape
+8. **Respect accessibility settings**: Honor reduce motion, high contrast, and other system preferences

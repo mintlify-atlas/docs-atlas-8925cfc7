@@ -1,0 +1,360 @@
+---
+title: "ArtifactAPILogic"
+description: "Controller for fetching artifact data from the Metropolitan Museum of Art API"
+---
+
+## Overview
+
+The `ArtifactAPILogic` class provides an interface for retrieving detailed artifact information from both the Metropolitan Museum of Art (Met) API and a self-hosted backup source. It includes caching to optimize performance and reduce API calls.
+
+## Class Definition
+
+```dart
+class ArtifactAPILogic {
+  final HashMap<String, ArtifactData?> _artifactCache = HashMap();
+  ArtifactAPIService get service => GetIt.I.get<ArtifactAPIService>();
+}
+```
+
+## Properties
+
+<ParamField path="_artifactCache" type="HashMap<String, ArtifactData?>">
+  Internal cache storing previously fetched artifact data by ID. Prevents redundant API calls.
+</ParamField>
+
+<ParamField path="service" type="ArtifactAPIService">
+  The underlying service that handles HTTP requests to the Met API and self-hosted endpoints.
+</ParamField>
+
+## Methods
+
+### getArtifactByID()
+
+Retrieves artifact data by its unique ID, with optional self-hosted fallback.
+
+```dart
+Future<ArtifactData?> getArtifactByID(
+  String id, 
+  {bool selfHosted = false}
+) async
+```
+
+**Parameters:**
+- `id` - The artifact's unique identifier from the Met Museum collection
+- `selfHosted` - If `true`, fetches from self-hosted source; if `false`, fetches from Met API (default: `false`)
+
+**Returns:** `Future<ArtifactData?>` - The artifact data or `null` if not found
+
+**Throws:** Exception with localized error message if artifact cannot be found
+
+**Caching Behavior:**
+- First checks the internal cache for the artifact ID
+- If cached, returns immediately without making an API call
+- If not cached, fetches from the API and stores in cache
+- Cache persists for the lifetime of the app session
+
+**Example:**
+
+```dart
+// Fetch from Met API
+try {
+  final artifact = await artifactLogic.getArtifactByID('545728');
+  if (artifact != null) {
+    print('Title: ${artifact.title}');
+    print('Date: ${artifact.date}');
+    print('Culture: ${artifact.culture}');
+  }
+} catch (e) {
+  print('Error fetching artifact: $e');
+}
+
+// Fetch from self-hosted source
+final selfHostedArtifact = await artifactLogic.getArtifactByID(
+  '545728',
+  selfHosted: true,
+);
+```
+
+## ArtifactAPIService
+
+The underlying service that handles HTTP communication:
+
+```dart
+class ArtifactAPIService {
+  final String _baseMETUrl = 'https://collectionapi.metmuseum.org/public/collection/v1';
+  final String _baseSelfHostedUrl = 'https://www.wonderous.info/met';
+  
+  Future<ServiceResult<ArtifactData?>> getMetObjectByID(String id) async;
+  Future<ServiceResult<ArtifactData?>> getSelfHostedObjectByID(String id) async;
+}
+```
+
+### API Endpoints
+
+**Met Museum API:**
+```
+GET https://collectionapi.metmuseum.org/public/collection/v1/objects/{id}
+```
+
+**Self-Hosted Backup:**
+```
+GET https://www.wonderous.info/met/{id}.json
+```
+
+## ArtifactData Structure
+
+The returned artifact data includes:
+
+```dart
+class ArtifactData {
+  final String objectId;         // Unique identifier
+  final String title;            // Artifact name
+  final String image;            // Primary image URL
+  final String date;             // Date or period
+  final String objectType;       // Type (e.g., "vessel", "statue")
+  final String period;           // Historical period
+  final String country;          // Country of origin
+  final String medium;           // Materials used
+  final String dimension;        // Physical dimensions
+  final String classification;   // Classification category
+  final String culture;          // Cultural attribution
+  final int? objectBeginYear;    // Start year
+  final int? objectEndYear;      // End year
+}
+```
+
+### ArtifactData Fields
+
+<ParamField path="objectId" type="String">
+  The Met Museum's unique identifier for the artifact.
+</ParamField>
+
+<ParamField path="title" type="String">
+  The display name of the artifact.
+</ParamField>
+
+<ParamField path="image" type="String">
+  URL to the primary high-resolution image.
+</ParamField>
+
+<ParamField path="date" type="String">
+  Human-readable date or period (e.g., "ca. 1632", "2nd century BCE").
+</ParamField>
+
+<ParamField path="objectType" type="String">
+  The type of object (e.g., "jar", "textile", "sculpture").
+</ParamField>
+
+<ParamField path="culture" type="String">
+  Cultural or civilizational attribution (e.g., "Egyptian", "Roman").
+</ParamField>
+
+<ParamField path="medium" type="String">
+  Materials and techniques used (e.g., "bronze", "gold and lapis lazuli").
+</ParamField>
+
+<ParamField path="objectBeginYear" type="int?">
+  Numeric start year for the artifact's creation period (can be null).
+</ParamField>
+
+<ParamField path="objectEndYear" type="int?">
+  Numeric end year for the artifact's creation period (can be null).
+</ParamField>
+
+## Usage Examples
+
+### Basic Artifact Retrieval
+
+```dart
+// Access the global ArtifactAPILogic instance
+ArtifactAPILogic get artifactLogic => GetIt.I.get<ArtifactAPILogic>();
+
+// Fetch artifact details
+final artifact = await artifactLogic.getArtifactByID('545728');
+if (artifact != null) {
+  print('Found: ${artifact.title}');
+  print('From: ${artifact.culture}');
+  print('Date: ${artifact.date}');
+}
+```
+
+### Displaying Artifact Information
+
+```dart
+Future<void> displayArtifactDetails(String artifactId) async {
+  try {
+    final artifact = await artifactLogic.getArtifactByID(artifactId);
+    
+    if (artifact == null) {
+      print('Artifact not found');
+      return;
+    }
+    
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('Title: ${artifact.title}');
+    print('Type: ${artifact.objectType}');
+    print('Culture: ${artifact.culture}');
+    print('Period: ${artifact.period}');
+    print('Date: ${artifact.date}');
+    print('Medium: ${artifact.medium}');
+    print('Dimensions: ${artifact.dimension}');
+    print('Country: ${artifact.country}');
+    print('Image: ${artifact.image}');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  } catch (e) {
+    print('Error: $e');
+  }
+}
+```
+
+### Batch Retrieval with Caching
+
+```dart
+// Fetch multiple artifacts efficiently
+Future<List<ArtifactData?>> fetchMultipleArtifacts(
+  List<String> artifactIds,
+) async {
+  final results = <ArtifactData?>[];
+  
+  for (var id in artifactIds) {
+    // Subsequent calls for the same ID will use cache
+    final artifact = await artifactLogic.getArtifactByID(id);
+    results.add(artifact);
+  }
+  
+  return results;
+}
+
+// Example usage
+final ids = ['545728', '39666', '308120'];
+final artifacts = await fetchMultipleArtifacts(ids);
+print('Fetched ${artifacts.whereType<ArtifactData>().length} artifacts');
+```
+
+### Using Self-Hosted Source
+
+```dart
+// Fetch from self-hosted backup (faster, more reliable)
+final artifact = await artifactLogic.getArtifactByID(
+  '545728',
+  selfHosted: true,
+);
+
+// Useful for displaying collectible details
+Future<void> showCollectibleDetails(CollectibleData collectible) async {
+  final artifactData = await artifactLogic.getArtifactByID(
+    collectible.id,
+    selfHosted: true, // Use self-hosted for better performance
+  );
+  
+  if (artifactData != null) {
+    print('${collectible.title}');
+    print('Date: ${artifactData.date}');
+    print('Culture: ${artifactData.culture}');
+  }
+}
+```
+
+### Error Handling
+
+```dart
+// Handle potential errors
+Future<ArtifactData?> safeGetArtifact(String id) async {
+  try {
+    return await artifactLogic.getArtifactByID(id);
+  } catch (e) {
+    print('Failed to fetch artifact $id: $e');
+    return null;
+  }
+}
+
+// With fallback to self-hosted
+Future<ArtifactData?> getArtifactWithFallback(String id) async {
+  try {
+    // Try Met API first
+    return await artifactLogic.getArtifactByID(id);
+  } catch (e) {
+    print('Met API failed, trying self-hosted...');
+    try {
+      return await artifactLogic.getArtifactByID(id, selfHosted: true);
+    } catch (e2) {
+      print('Both sources failed: $e2');
+      return null;
+    }
+  }
+}
+```
+
+### Integration with Collectibles
+
+```dart
+// Get detailed info for a collectible
+Future<void> exploreCollectible(String collectibleId) async {
+  // Update collectible state
+  collectiblesLogic.setState(collectibleId, CollectibleState.explored);
+  
+  // Fetch detailed artifact data
+  final artifact = await artifactLogic.getArtifactByID(
+    collectibleId,
+    selfHosted: true,
+  );
+  
+  if (artifact != null) {
+    // Display artifact details in UI
+    displayArtifactDetails(artifact);
+  }
+}
+```
+
+### Cache Benefits
+
+```dart
+// First call makes an API request
+final artifact1 = await artifactLogic.getArtifactByID('545728');
+print('Fetched from API');
+
+// Second call returns cached data instantly
+final artifact2 = await artifactLogic.getArtifactByID('545728');
+print('Returned from cache');
+
+// Both variables reference the same data
+assert(artifact1 == artifact2);
+```
+
+## ServiceResult
+
+The API service returns results wrapped in a `ServiceResult` object:
+
+```dart
+class ServiceResult<T> {
+  final bool success;      // Whether the request succeeded
+  final T? content;        // The parsed content (if successful)
+  final String? error;     // Error message (if failed)
+}
+```
+
+## Registration
+
+Both the logic and service are registered as singletons using GetIt:
+
+```dart
+void registerSingletons() {
+  GetIt.I.registerLazySingleton<ArtifactAPILogic>(() => ArtifactAPILogic());
+  GetIt.I.registerLazySingleton<ArtifactAPIService>(() => ArtifactAPIService());
+}
+```
+
+## API Reference
+
+The Met Museum API documentation is available at:
+- **Documentation**: https://metmuseum.github.io/
+- **Base URL**: https://collectionapi.metmuseum.org/public/collection/v1
+- **Object Endpoint**: `/objects/{objectID}`
+
+## Related Classes
+
+- `ArtifactAPIService` - HTTP service for API requests
+- `ArtifactData` - Data model for artifact information
+- `CollectiblesLogic` - Uses artifact API for collectible details
+- `HttpClient` - Underlying HTTP client utility
+- `ServiceResult` - Wrapper for service responses

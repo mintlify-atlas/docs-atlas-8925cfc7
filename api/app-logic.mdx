@@ -1,0 +1,198 @@
+---
+title: "AppLogic"
+description: "Top-level application controller managing bootstrap, orientation, and image precaching"
+---
+
+## Overview
+
+The `AppLogic` class is the top-level application controller responsible for initializing the Wonderous app, managing device orientation, and handling image precaching. It orchestrates the bootstrap process by loading settings, localizations, wonders data, timeline events, and collectibles.
+
+## Class Definition
+
+```dart
+class AppLogic {
+  Size _appSize = Size.zero;
+  bool isBootstrapComplete = false;
+  List<Axis> supportedOrientations = [Axis.vertical, Axis.horizontal];
+}
+```
+
+## Properties
+
+<ParamField path="isBootstrapComplete" type="bool">
+  Indicates whether the bootstrap process has completed. The router uses this to prevent redirects while bootstrapping. Defaults to `false`.
+</ParamField>
+
+<ParamField path="supportedOrientations" type="List<Axis>">
+  Indicates which orientations the app will allow by default. Affects Android/iOS devices only. Defaults to both landscape (`Axis.horizontal`) and portrait (`Axis.vertical`).
+</ParamField>
+
+<ParamField path="supportedOrientationsOverride" type="List<Axis>?">
+  Allows a view to override the currently supported orientations. For example, `FullscreenVideoViewer` always wants to enable both landscape and portrait. If a view sets this override, it is responsible for setting it back to null when finished.
+</ParamField>
+
+<ParamField path="display" type="Display">
+  Returns the first platform display instance from `PlatformDispatcher`.
+</ParamField>
+
+## Methods
+
+### bootstrap()
+
+Initializes the app and all main actors, loads settings, and sets up services.
+
+```dart
+Future<void> bootstrap() async
+```
+
+**Process:**
+1. Sets minimum window size for desktop apps (Windows/macOS)
+2. Enables semantics for web accessibility
+3. Initializes app bitmaps via `AppBitmaps.init()`
+4. Sets high refresh rate on Android devices
+5. Loads settings via `settingsLogic.load()`
+6. Loads localizations via `localeLogic.load()`
+7. Initializes wonders data via `wondersLogic.init()`
+8. Initializes timeline events via `timelineLogic.init()`
+9. Initializes and loads collectibles
+10. Sets `isBootstrapComplete` to true
+11. Navigates to intro or home screen based on onboarding status
+
+**Example:**
+
+```dart
+void main() async {
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  registerSingletons();
+  runApp(WondersApp());
+  await appLogic.bootstrap();
+}
+```
+
+### handleAppSizeChanged()
+
+Called from the UI layer once a MediaQuery has been obtained. Updates supported orientations based on device size.
+
+```dart
+void handleAppSizeChanged(Size appSize)
+```
+
+**Parameters:**
+- `appSize` - The current size of the app window/screen
+
+**Behavior:**
+- Disables landscape layout on smaller form factors (shortest side < 600dp)
+- Updates system orientation preferences accordingly
+
+### shouldUseNavRail()
+
+Determines whether to use a navigation rail based on the current app dimensions.
+
+```dart
+bool shouldUseNavRail()
+```
+
+**Returns:** `true` if width > height and height > 250, otherwise `false`
+
+### showFullscreenDialogRoute()
+
+Displays a fullscreen dialog route with optional transparency.
+
+```dart
+Future<T?> showFullscreenDialogRoute<T>(
+  BuildContext context,
+  Widget child, {
+  bool transparent = false,
+})
+```
+
+**Parameters:**
+- `context` - The build context
+- `child` - The widget to display in the dialog
+- `transparent` - Whether the dialog background should be transparent (default: `false`)
+
+**Returns:** Future that resolves to the result of type `T` when the dialog is dismissed
+
+### precacheIcons()
+
+Precaches navigation bar icons (active and idle states) for better performance.
+
+```dart
+void precacheIcons(BuildContext context)
+```
+
+**Precached Icons:**
+- Editorial tab (active/idle)
+- Photos tab (active/idle)
+- Artifacts tab (active/idle)
+- Timeline tab (active/idle)
+
+### precacheWonderImages()
+
+Precaches wonder-specific images including foreground elements, backgrounds, and photos.
+
+```dart
+void precacheWonderImages(BuildContext context)
+```
+
+**Precached Images per Wonder:**
+- Main wonder image
+- Foreground elements (left/right or front/back)
+- Sun/moon images
+- Flattened background
+- Wonder button
+- 4 photo thumbnails
+
+### precacheUrl()
+
+Precaches a single image URL.
+
+```dart
+void precacheUrl(String url, BuildContext context) async
+```
+
+**Parameters:**
+- `url` - The image URL to precache
+- `context` - The build context
+
+## Usage Example
+
+```dart
+// Access the global AppLogic instance
+AppLogic get appLogic => GetIt.I.get<AppLogic>();
+
+// In your app initialization
+await appLogic.bootstrap();
+
+// Check if bootstrap is complete
+if (appLogic.isBootstrapComplete) {
+  // Navigate to main content
+}
+
+// Override orientation for a specific screen
+appLogic.supportedOrientationsOverride = [Axis.horizontal];
+// ... show fullscreen video
+appLogic.supportedOrientationsOverride = null; // Reset when done
+
+// Precache images for better UX
+appLogic.precacheIcons(context);
+appLogic.precacheWonderImages(context);
+```
+
+## Registration
+
+The `AppLogic` instance is registered as a singleton using GetIt:
+
+```dart
+void registerSingletons() {
+  GetIt.I.registerLazySingleton<AppLogic>(() => AppLogic());
+}
+```
+
+## Related Classes
+
+- `WondersLogic` - Manages wonder data initialization
+- `TimelineLogic` - Manages timeline events
+- `CollectiblesLogic` - Manages collectible artifacts
+- `SettingsLogic` - Manages app settings
+- `LocaleLogic` - Manages localizations

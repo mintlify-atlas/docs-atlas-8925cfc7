@@ -1,0 +1,279 @@
+---
+title: "TimelineLogic"
+description: "Controller for managing historical timeline events across civilizations"
+---
+
+## Overview
+
+The `TimelineLogic` class manages historical timeline events in the Wonderous app. It combines global historical events with wonder construction events to provide a comprehensive timeline spanning from 3000 BCE to the present day.
+
+## Class Definition
+
+```dart
+class TimelineLogic {
+  List<TimelineEvent> events = [];
+}
+```
+
+## Properties
+
+<ParamField path="events" type="List<TimelineEvent>">
+  A list containing all timeline events, including both global historical events and wonder construction events. Populated during initialization.
+</ParamField>
+
+## Methods
+
+### init()
+
+Initializes the timeline by merging global historical events with wonder construction events.
+
+```dart
+void init()
+```
+
+**Process:**
+1. Loads global historical events from `GlobalEventsData`
+2. Creates timeline events for each wonder's construction date
+3. Combines both lists into the `events` property
+
+**Example:**
+
+```dart
+timelineLogic.init();
+print('Total events: ${timelineLogic.events.length}');
+// Output: Total events: 62 (54 global events + 8 wonder events)
+```
+
+## TimelineEvent Structure
+
+Each timeline event contains:
+
+```dart
+class TimelineEvent {
+  TimelineEvent(this.year, this.description);
+  final int year;
+  final String description;
+}
+```
+
+<ParamField path="year" type="int">
+  The year of the event. Negative values represent BCE dates.
+</ParamField>
+
+<ParamField path="description" type="String">
+  A localized description of the event.
+</ParamField>
+
+## Global Historical Events
+
+The timeline includes major historical events across civilizations:
+
+### Ancient History (-3000 to -500)
+- -2900 BCE: Mesopotamian cuneiform writing
+- -2700 BCE: Egyptian Old Kingdom begins
+- -2600 BCE: Stonehenge construction
+- -2560 BCE: Great Pyramid completion
+- -2500 BCE: Indus Valley Civilization
+- -776 BCE: First Olympic Games
+- -753 BCE: Founding of Rome
+- -447 BCE: Parthenon construction
+
+### Classical Period (-500 to 500)
+- -322 BCE: Aristotle's death
+- -200 BCE: Great Wall construction
+- -44 BCE: Julius Caesar assassination
+- -4 BCE: Birth of Jesus
+- 43 CE: Roman conquest of Britain
+- 79 CE: Vesuvius eruption
+- 455 CE: Vandals sack Rome
+
+### Medieval Era (500-1500)
+- 632 CE: Death of Muhammad
+- 793 CE: Viking raids begin
+- 800 CE: Charlemagne crowned emperor
+- 1077 CE: Walk to Canossa
+- 1199 CE: Death of Richard I
+- 1347 CE: Black Death begins
+- 1492 CE: Columbus reaches Americas
+
+### Modern Era (1500-2000)
+- 1760 CE: Industrial Revolution begins
+- 1789 CE: French Revolution
+- 1914 CE: World War I begins
+- 1939 CE: World War II begins
+- 1957 CE: Sputnik launch
+- 1969 CE: Moon landing
+
+## Wonder Construction Events
+
+Timeline events are automatically created for each wonder's construction:
+
+- **Pyramids of Giza**: -2560 BCE
+- **Great Wall of China**: -200 BCE (initial construction)
+- **Petra**: ~100 BCE
+- **Colosseum**: 80 CE
+- **Chichen Itza**: ~600 CE
+- **Machu Picchu**: ~1450 CE
+- **Taj Mahal**: 1632 CE
+- **Christ the Redeemer**: 1931 CE
+
+## Usage Examples
+
+### Basic Initialization
+
+```dart
+// Access the global TimelineLogic instance
+TimelineLogic get timelineLogic => GetIt.I.get<TimelineLogic>();
+
+// Initialize timeline (called during app bootstrap)
+timelineLogic.init();
+```
+
+### Accessing Timeline Events
+
+```dart
+// Get all events
+final allEvents = timelineLogic.events;
+
+// Print all events chronologically
+for (var event in allEvents) {
+  final year = event.year < 0 ? '${event.year.abs()} BCE' : '${event.year} CE';
+  print('$year: ${event.description}');
+}
+```
+
+### Filtering Events by Time Period
+
+```dart
+// Get ancient events (before year 0)
+final ancientEvents = timelineLogic.events.where(
+  (event) => event.year < 0
+).toList();
+
+// Get events in a specific century
+final medievalEvents = timelineLogic.events.where(
+  (event) => event.year >= 500 && event.year < 1500
+).toList();
+
+// Get recent events (after 1900)
+final modernEvents = timelineLogic.events.where(
+  (event) => event.year >= 1900
+).toList();
+```
+
+### Finding Events by Year Range
+
+```dart
+// Get events between two years
+List<TimelineEvent> getEventsBetween(int startYear, int endYear) {
+  return timelineLogic.events.where(
+    (event) => event.year >= startYear && event.year <= endYear
+  ).toList();
+}
+
+// Example: Events during the Roman Empire
+final romanEraEvents = getEventsBetween(-753, 476);
+```
+
+### Sorting and Organizing
+
+```dart
+// Events are stored in chronological order, but you can sort if needed
+final sortedEvents = List.from(timelineLogic.events)
+  ..sort((a, b) => a.year.compareTo(b.year));
+
+// Get the earliest event
+final earliestEvent = timelineLogic.events.reduce(
+  (a, b) => a.year < b.year ? a : b
+);
+
+// Get the most recent event
+final latestEvent = timelineLogic.events.reduce(
+  (a, b) => a.year > b.year ? a : b
+);
+```
+
+### Timeline Visualization
+
+```dart
+// Calculate event distribution across centuries
+Map<int, int> getEventCountByCentury() {
+  final countMap = <int, int>{};
+  
+  for (var event in timelineLogic.events) {
+    final century = (event.year / 100).floor();
+    countMap[century] = (countMap[century] ?? 0) + 1;
+  }
+  
+  return countMap;
+}
+
+// Example usage
+final distribution = getEventCountByCentury();
+print('Events in 1st century CE: ${distribution[0]}');
+```
+
+### Integration with Wonders
+
+```dart
+// Find events around a wonder's construction
+TimelineEvent? findWonderEvent(WonderType wonder) {
+  final wonderData = wondersLogic.getData(wonder);
+  
+  return timelineLogic.events.firstWhereOrNull(
+    (event) => event.description.contains(wonderData.title)
+  );
+}
+
+// Get historical context for a wonder
+List<TimelineEvent> getContextForWonder(WonderType wonder) {
+  final wonderData = wondersLogic.getData(wonder);
+  final wonderYear = wonderData.startYr;
+  
+  // Events 100 years before and after the wonder
+  return timelineLogic.events.where(
+    (event) => event.year >= wonderYear - 100 && 
+               event.year <= wonderYear + 100
+  ).toList();
+}
+```
+
+## Registration
+
+The `TimelineLogic` instance is registered as a singleton using GetIt:
+
+```dart
+void registerSingletons() {
+  GetIt.I.registerLazySingleton<TimelineLogic>(() => TimelineLogic());
+}
+```
+
+## Initialization Flow
+
+The `TimelineLogic` initialization is part of the app's bootstrap process:
+
+```dart
+Future<void> bootstrap() async {
+  // ... previous initialization steps
+  
+  // Events
+  timelineLogic.init();
+  
+  // ... remaining initialization
+}
+```
+
+## Year Range Context
+
+The timeline operates within the year ranges defined by `WondersLogic`:
+
+```dart
+final startYear = wondersLogic.timelineStartYear; // -3000
+final endYear = wondersLogic.timelineEndYear; // 2200
+```
+
+## Related Classes
+
+- `GlobalEventsData` - Provides the list of global historical events
+- `WondersLogic` - Provides wonder data for construction events
+- `WonderData` - Contains start year for wonder construction

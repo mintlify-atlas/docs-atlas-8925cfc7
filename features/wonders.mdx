@@ -1,0 +1,261 @@
+---
+title: Wonders
+description: Explore the 8 wonders of the world with stunning visuals and interactive navigation
+---
+
+The Wonders feature is the core of the Wonderous app, showcasing 8 of the world's most iconic structures with rich visual content, historical information, and interactive exploration.
+
+## The 8 Wonders
+
+The app features these wonders, defined in the `WonderType` enum:
+
+```dart lib/logic/data/wonder_type.dart
+enum WonderType {
+  chichenItza,
+  christRedeemer,
+  colosseum,
+  greatWall,
+  machuPicchu,
+  petra,
+  pyramidsGiza,
+  tajMahal,
+}
+```
+
+Each wonder is represented as a unique type that flows through the entire application.
+
+## Wonder Data Model
+
+The `WonderData` class contains comprehensive information about each wonder:
+
+```dart lib/logic/data/wonder_data.dart
+class WonderData extends Equatable {
+  const WonderData({
+    required this.type,
+    required this.title,
+    required this.subTitle,
+    required this.regionTitle,
+    this.startYr = 0,
+    this.endYr = 0,
+    this.artifactStartYr = 0,
+    this.artifactEndYr = 0,
+    this.artifactCulture = '',
+    this.artifactGeolocation = '',
+    this.lat = 0,
+    this.lng = 0,
+    this.imageIds = const [],
+    required this.unsplashCollectionId,
+    // ... additional fields
+  });
+
+  final WonderType type;
+  final String title;
+  final String subTitle;
+  final String regionTitle;
+  final int startYr;              // Construction start year
+  final int endYr;                // Construction end year
+  final int artifactStartYr;      // Artifact search range
+  final int artifactEndYr;
+  final String artifactCulture;
+  final double lat;               // Geographic coordinates
+  final double lng;
+  final List<String> imageIds;
+  final String unsplashCollectionId;  // Photo gallery collection
+  final Map<int, String> events;      // Historical timeline events
+  final List<String> highlightArtifacts;  // Featured artifacts
+  final List<String> hiddenArtifacts;     // Collectible artifacts
+  // ... content fields for history, construction, location info
+}
+```
+
+### Example: Great Wall Data
+
+```dart lib/logic/data/wonders_data/great_wall_data.dart
+class GreatWallData extends WonderData {
+  GreatWallData()
+    : super(
+        type: WonderType.greatWall,
+        title: 'Great Wall',
+        subTitle: 'of China',
+        regionTitle: 'China',
+        startYr: -700,
+        endYr: 1644,
+        lat: 40.43199751120627,
+        lng: 116.57040708482984,
+        unsplashCollectionId: 'Kg_h04xvZEo',
+        events: {
+          -700: 'Wall construction begins',
+          -214: 'Qin dynasty connects walls',
+          -121: 'Han dynasty extends westward',
+          556: 'Northern Qi rebuilds sections',
+          618: 'Tang dynasty era',
+          1487: 'Ming dynasty fortifications',
+        },
+        highlightArtifacts: const [
+          '79091',
+          '781812',
+          '40213',
+          '40765',
+          '57612',
+          '666573',
+        ],
+        hiddenArtifacts: const [
+          '39918',  // Collectible: Biographies scroll
+          '39666',  // Collectible: Jar with Dragon
+          '39735',  // Collectible: Panel with Peonies
+        ],
+      );
+}
+```
+
+## Wonders Logic
+
+The `WondersLogic` class manages all wonder data and provides access methods:
+
+```dart lib/logic/wonders_logic.dart
+class WondersLogic {
+  List<WonderData> all = [];
+
+  final int timelineStartYear = -3000;
+  final int timelineEndYear = 2200;
+
+  WonderData getData(WonderType value) {
+    WonderData? result = all.firstWhereOrNull((w) => w.type == value);
+    if (result == null) throw ('Could not find data for wonder type $value');
+    return result;
+  }
+
+  void init() {
+    all = [
+      GreatWallData(),
+      PetraData(),
+      ColosseumData(),
+      ChichenItzaData(),
+      MachuPicchuData(),
+      TajMahalData(),
+      ChristRedeemerData(),
+      PyramidsGizaData(),
+    ];
+  }
+}
+```
+
+## Home Screen Navigation
+
+The `HomeScreen` provides an elegant horizontal swipe interface to browse wonders:
+
+### Key Features
+
+**Parallax Scrolling**: Background, middle-ground, and foreground layers move at different speeds for depth.
+
+**Infinite Scrolling**: Users can swipe endlessly through wonders using a high initial page number trick:
+
+```dart lib/ui/screens/home/wonders_home_screen.dart
+// Allow 'infinite' scrolling by starting at a very high page number
+final initialPage = _numWonders * 100 + _wonderIndex;
+_pageController = PageController(viewportFraction: 1, initialPage: initialPage);
+
+void _handlePageChanged(value) {
+  final newIndex = value % _numWonders;  // Wrap around using modulo
+  if (newIndex == _wonderIndex) return;
+  setState(() {
+    _wonderIndex = newIndex;
+    settingsLogic.prevWonderIndex.value = _wonderIndex;  // Persist selection
+  });
+  AppHaptics.lightImpact();
+}
+```
+
+**Vertical Swipe Gesture**: Swipe up on a wonder to view its details page.
+
+**Wonder Illustrations**: Each wonder has layered illustrations (background, middle, foreground) that create parallax effects:
+
+```dart
+Widget _buildMgPageView() {
+  return PageView.builder(
+    controller: _pageController,
+    onPageChanged: _handlePageChanged,
+    itemBuilder: (_, index) {
+      final wonder = _wonders[index % _wonders.length];
+      final wonderType = wonder.type;
+      bool isShowing = _isSelected(wonderType);
+      return _swipeController.buildListener(
+        builder: (swipeAmt, _, child) {
+          final config = WonderIllustrationConfig.mg(
+            isShowing: isShowing,
+            zoom: .05 * swipeAmt,  // Zoom effect on swipe
+          );
+          return WonderIllustration(wonderType, config: config);
+        },
+      );
+    },
+  );
+}
+```
+
+## Visual Effects
+
+### Animated Clouds
+
+Wonders display animated clouds that match their theme:
+
+```dart
+FractionallySizedBox(
+  widthFactor: 1,
+  heightFactor: .5,
+  child: AnimatedClouds(wonderType: currentWonder.type, opacity: 1),
+)
+```
+
+### Dynamic Gradients
+
+Gradients intensify as users swipe up to transition to details:
+
+```dart
+Widget buildSwipeableBgGradient(Color fgColor) {
+  return _swipeController.buildListener(
+    builder: (swipeAmt, isPointerDown, _) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              fgColor.withValues(alpha: 0),
+              fgColor.withValues(
+                alpha: .5 + fgColor.a * .25 + (isPointerDown ? .05 : 0) + swipeAmt * .20,
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+```
+
+### Wonder Title Text
+
+Each wonder displays its title with custom styling and shadow effects for readability.
+
+## Accessibility
+
+- Semantic labels for screen readers
+- Keyboard navigation support (arrow keys)
+- Live region announcements when wonder changes
+- Haptic feedback for interactions
+- Page indicator with dot press support
+
+## Integration Points
+
+- **Timeline**: Each wonder's historical events feed into the global timeline
+- **Artifacts**: `highlightArtifacts` and `hiddenArtifacts` connect to the Metropolitan Museum API
+- **Photo Gallery**: `unsplashCollectionId` links to curated photo collections
+- **Collectibles**: `hiddenArtifacts` become discoverable collectibles
+- **Details View**: Tapping a wonder navigates to comprehensive information tabs
+
+## Performance Optimization
+
+- `RepaintBoundary` widgets isolate expensive repaints
+- `ExcludeSemantics` on decorative elements
+- Tween animations with configurable durations
+- Lazy loading of illustrations based on visibility
+- Viewport fraction optimization for smooth scrolling

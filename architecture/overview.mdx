@@ -1,0 +1,207 @@
+---
+title: Architecture Overview
+description: High-level architecture and design principles of the Wonderous Flutter app
+---
+
+Wonderous is a showcase Flutter application that demonstrates best practices in app architecture, visual design, and cross-platform development. The app explores famous wonders of the world through rich, interactive content.
+
+## Design Principles
+
+The Wonderous app is built on several key architectural principles:
+
+### Separation of Concerns
+
+The codebase maintains a clear separation between **logic** and **UI** layers:
+
+- **Logic Layer** (`lib/logic/`): Contains all business logic, state management, data models, and services
+- **UI Layer** (`lib/ui/`): Contains widgets, screens, and visual components
+
+This separation ensures that:
+- Business logic is reusable and testable
+- UI components remain focused on presentation
+- State management is centralized and predictable
+
+### Single Responsibility
+
+Each logic controller has a specific, well-defined purpose:
+
+- `AppLogic`: Application lifecycle and bootstrapping
+- `WondersLogic`: Wonder data management
+- `SettingsLogic`: User preferences and configuration
+- `CollectiblesLogic`: Collectible items and discovery
+- `TimelineLogic`: Historical timeline data
+- `ArtifactAPILogic`: Artifact search and retrieval
+
+### Reactive State Management
+
+The app uses a reactive architecture where:
+- State changes propagate automatically to UI components
+- UI widgets rebuild when watched values change
+- Logic classes expose `ValueNotifier` properties for reactive updates
+
+## Key Technologies
+
+### Core Stack
+
+<CardGroup cols={2}>
+  <Card title="Flutter SDK" icon="mobile">
+    Version 3.32.0+ with Dart 3.8.0+
+  </Card>
+  <Card title="GetIt" icon="box">
+    Dependency injection and service locator
+  </Card>
+  <Card title="Provider" icon="wave-pulse">
+    State management through GetItMixin
+  </Card>
+  <Card title="GoRouter" icon="route">
+    Declarative routing and navigation
+  </Card>
+</CardGroup>
+
+### Key Dependencies
+
+- **get_it**: Service locator for dependency injection
+- **get_it_mixin**: Reactive widget bindings to GetIt services
+- **provider**: State management infrastructure
+- **go_router**: Type-safe routing with deep linking support
+- **flutter_animate**: Declarative animations
+
+## Application Layers
+
+### Presentation Layer
+
+The UI layer follows Flutter's widget composition model:
+
+```dart
+WondersApp (MaterialApp.router)
+  └─ WondersAppScaffold (Theme & Style Provider)
+      └─ Screen Widgets
+          └─ Common Controls & Components
+```
+
+**Key Components:**
+- `WondersAppScaffold`: Root scaffold providing app-wide theme and styling
+- Screen widgets: Feature-specific screens (home, wonder details, timeline, etc.)
+- Common controls: Reusable UI components (buttons, images, modals)
+
+### Business Logic Layer
+
+Logic classes are registered as singletons and accessed throughout the app:
+
+```dart
+// Registration in main.dart
+void registerSingletons() {
+  GetIt.I.registerLazySingleton<AppLogic>(() => AppLogic());
+  GetIt.I.registerLazySingleton<WondersLogic>(() => WondersLogic());
+  GetIt.I.registerLazySingleton<SettingsLogic>(() => SettingsLogic());
+  // ... more services
+}
+
+// Access via global getters
+AppLogic get appLogic => GetIt.I.get<AppLogic>();
+```
+
+See [State Management](/architecture/state-management) for detailed information on how state is managed.
+
+### Data Layer
+
+Data is organized into structured models:
+
+- **Wonder Data** (`lib/logic/data/wonders_data/`): Static wonder information
+- **Collectible Data**: Collectible items for each wonder
+- **Timeline Data**: Historical events and timeline information
+- **Artifact Data**: Museum artifact metadata
+
+### Service Layer
+
+Services handle external integrations and platform-specific functionality:
+
+- `ArtifactAPIService`: Metropolitan Museum of Art API integration
+- `UnsplashLogic`: Photo discovery and display
+- `NativeWidgetService`: Home screen widget integration
+- `LocaleLogic`: Internationalization and localization
+
+## Application Bootstrap
+
+The app follows a structured initialization sequence in `main.dart:16-31`:
+
+1. **Initialization**: Initialize Flutter bindings and platform services
+2. **Singleton Registration**: Register all logic controllers and services
+3. **App Launch**: Create and run `WondersApp` widget
+4. **Bootstrap**: Load settings, locale, data, and collectibles
+5. **Navigation**: Route to intro or home screen based on onboarding status
+
+```dart
+void main() async {
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  
+  // Preserve splash screen during bootstrap
+  if (!kIsWeb) {
+    FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  }
+  
+  // Register singletons
+  registerSingletons();
+  
+  // Run app
+  runApp(WondersApp());
+  
+  // Bootstrap logic
+  await appLogic.bootstrap();
+  
+  // Remove splash screen
+  FlutterNativeSplash.remove();
+}
+```
+
+## Platform Support
+
+Wonderous is a truly multi-platform application supporting:
+
+- **Mobile**: iOS and Android with native integrations
+- **Desktop**: Windows and macOS with adaptive layouts
+- **Web**: WASM-optimized web builds at wonderous.app/web
+
+### Platform-Specific Optimizations
+
+- **iOS**: Uses Impeller rendering engine by default
+- **Android**: High refresh rate display support
+- **Desktop**: Minimum window size constraints
+- **Web**: Automatic accessibility features and image precaching
+
+## Performance Considerations
+
+### Image Caching
+
+The app implements aggressive image caching to ensure smooth performance:
+
+- Custom `ImageCache` with 250MB maximum size
+- Strategic image precaching on web platform
+- Lazy loading for wonder images and icons
+
+### Responsive Design
+
+The app adapts to different screen sizes and orientations:
+
+- Dynamic layout switching (portrait/landscape)
+- Device size-based UI decisions (navigation rail vs. bottom nav)
+- Adaptive orientation locking on smaller devices
+
+### Animation Control
+
+Animations respect system preferences:
+
+- Honors system "reduce motion" settings
+- Configurable animation timing through `$styles.times`
+- Fade transitions for smooth screen changes
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/architecture/project-structure">
+    Explore the file organization and folder structure
+  </Card>
+  <Card title="State Management" icon="diagram-project" href="/architecture/state-management">
+    Learn how GetIt and Provider manage application state
+  </Card>
+</CardGroup>

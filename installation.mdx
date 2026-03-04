@@ -1,0 +1,295 @@
+---
+title: Installation
+description: Complete guide to setting up your development environment and installing Wonderous, including Flutter setup, dependencies, and platform-specific requirements.
+---
+
+# Installation Guide
+
+This guide will walk you through setting up your development environment and installing Wonderous on your local machine.
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install Flutter SDK">
+    If you're new to Flutter, follow the official [Flutter installation guide](https://flutter.dev/docs/get-started/install) for your operating system:
+    
+    - [macOS](https://docs.flutter.dev/get-started/install/macos)
+    - [Windows](https://docs.flutter.dev/get-started/install/windows)
+    - [Linux](https://docs.flutter.dev/get-started/install/linux)
+    
+    <Note>
+      Wonderous requires Flutter 3.32.0 or higher and Dart SDK 3.8.0 or higher.
+    </Note>
+  </Step>
+
+  <Step title="Verify Flutter Installation">
+    After installing Flutter, verify your installation:
+    
+    ```bash
+    flutter doctor
+    ```
+    
+    This command checks your environment and displays a report. Make sure all required dependencies are installed.
+  </Step>
+
+  <Step title="Switch to Stable Channel">
+    Wonderous works best with Flutter's stable channel:
+    
+    ```bash
+    flutter channel stable
+    flutter upgrade
+    ```
+  </Step>
+</Steps>
+
+## Platform-Specific Setup
+
+<Tabs>
+  <Tab title="iOS">
+    ### iOS Requirements
+    
+    To run Wonderous on iOS, you'll need:
+    - macOS computer
+    - Xcode 14.0 or higher
+    - CocoaPods (usually installed with Xcode)
+    - iOS device or simulator
+    
+    #### Install Xcode
+    ```bash
+    # Install from Mac App Store or download from:
+    # https://developer.apple.com/xcode/
+    
+    # Accept Xcode license
+    sudo xcodebuild -license accept
+    
+    # Install command line tools
+    sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+    ```
+    
+    #### Install CocoaPods
+    ```bash
+    sudo gem install cocoapods
+    ```
+    
+    <Note>
+      Wonderous uses the new [Impeller Runtime](https://docs.flutter.dev/perf/impeller) by default on iOS for enhanced rendering performance.
+    </Note>
+  </Tab>
+  
+  <Tab title="Android">
+    ### Android Requirements
+    
+    To run Wonderous on Android, you'll need:
+    - Android Studio
+    - Android SDK (API level 21 or higher)
+    - Android device or emulator
+    
+    #### Install Android Studio
+    1. Download from [developer.android.com/studio](https://developer.android.com/studio)
+    2. Run the Android Studio Setup Wizard
+    3. Install the following components:
+       - Android SDK
+       - Android SDK Platform
+       - Android Virtual Device (AVD)
+    
+    #### Configure Android SDK
+    ```bash
+    # Verify Android setup
+    flutter doctor --android-licenses
+    ```
+    
+    Accept all Android licenses when prompted.
+  </Tab>
+  
+  <Tab title="Web">
+    ### Web Requirements
+    
+    To run Wonderous on the web, you'll need:
+    - Chrome browser (or any modern browser)
+    - Flutter web support enabled
+    
+    ```bash
+    # Enable web support
+    flutter config --enable-web
+    ```
+    
+    <Tip>
+      Wonderous is deployed using the WebAssembly (WASM) target for optimized web performance. You can test WASM locally using:
+      ```bash
+      flutter run -d chrome --wasm
+      ```
+    </Tip>
+  </Tab>
+  
+  <Tab title="Desktop">
+    ### Desktop Requirements
+    
+    Wonderous supports macOS, Windows, and Linux desktop platforms.
+    
+    #### macOS
+    ```bash
+    # Enable macOS desktop support
+    flutter config --enable-macos-desktop
+    ```
+    
+    #### Windows
+    Requirements:
+    - Visual Studio 2022 or Visual Studio Build Tools 2022
+    - Windows 10 or later
+    
+    ```bash
+    # Enable Windows desktop support
+    flutter config --enable-windows-desktop
+    ```
+    
+    #### Linux
+    Install required dependencies:
+    ```bash
+    sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev
+    
+    # Enable Linux desktop support
+    flutter config --enable-linux-desktop
+    ```
+  </Tab>
+</Tabs>
+
+## Clone the Repository
+
+Get the Wonderous source code from GitHub:
+
+```bash
+git clone https://github.com/gskinnerTeam/flutter-wonderous-app.git
+cd flutter-wonderous-app
+```
+
+## Install Dependencies
+
+Once you've cloned the repository, install all required packages:
+
+```bash
+flutter pub get
+```
+
+This will download and install all dependencies listed in `pubspec.yaml`, including:
+
+<AccordionGroup>
+  <Accordion title="Core Dependencies">
+    - **flutter_animate** (v4.5.0) - Advanced animations
+    - **go_router** (v17.0.1) - Declarative routing
+    - **get_it** (v7.2.0) - Service locator for dependency injection
+    - **provider** (v6.0.5) - State management
+  </Accordion>
+  
+  <Accordion title="UI & Graphics">
+    - **flutter_svg** (v2.0.1) - SVG rendering
+    - **image_fade** (v0.6.2) - Image transitions
+    - **flutter_staggered_grid_view** (v0.7.0) - Flexible grid layouts
+    - **extra_alignments** (v1.0.0) - Additional alignment options
+  </Accordion>
+  
+  <Accordion title="Integrations">
+    - **google_maps_flutter** (v2.2.8) - Google Maps integration
+    - **unsplash_client** (v3.0.0) - Unsplash API client
+    - **youtube_player_iframe** (v5.2.2) - YouTube video player
+    - **home_widget** (v0.9.0) - Native home screen widgets
+  </Accordion>
+  
+  <Accordion title="Utilities">
+    - **shared_preferences** (v2.0.17) - Local storage
+    - **package_info_plus** (v9.0.0) - App package information
+    - **url_launcher** (v6.1.14) - URL handling
+    - **intl** (v0.20.2) - Internationalization support
+  </Accordion>
+</AccordionGroup>
+
+## Verify Installation
+
+Check that everything is set up correctly:
+
+```bash
+flutter doctor -v
+```
+
+This command provides detailed information about your Flutter installation. All checkmarks should be green for your target platform.
+
+<Warning>
+  If you see any issues with `flutter doctor`, resolve them before proceeding to run the app. Common issues include missing SDK tools or unsigned licenses.
+</Warning>
+
+## Project Structure
+
+Familiarize yourself with the Wonderous project structure:
+
+```plaintext
+flutter-wonderous-app/
+├── lib/
+│   ├── logic/              # Business logic and data models
+│   │   ├── data/           # Wonder data and models
+│   │   ├── artifact_api_logic.dart
+│   │   ├── wonders_logic.dart
+│   │   └── ...
+│   ├── ui/                 # User interface
+│   │   ├── screens/        # Screen widgets
+│   │   ├── common/         # Shared UI components
+│   │   └── ...
+│   ├── styles/             # Theme and styling
+│   ├── l10n/               # Localization files
+│   ├── router.dart         # App routing configuration
+│   └── main.dart           # App entry point
+├── assets/                 # Images, fonts, and other assets
+│   ├── images/
+│   └── fonts/
+├── android/                # Android-specific code
+├── ios/                    # iOS-specific code
+├── web/                    # Web-specific code
+├── macos/                  # macOS-specific code
+├── windows/                # Windows-specific code
+└── pubspec.yaml            # Project dependencies
+```
+
+## Next Steps
+
+<Card title="Quick Start" icon="rocket" href="/quick-start">
+  Now that you have everything installed, learn how to run Wonderous on your device
+</Card>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Flutter command not found">
+    Make sure Flutter is added to your PATH. Add this to your shell configuration file:
+    
+    ```bash
+    # For bash (~/.bashrc) or zsh (~/.zshrc)
+    export PATH="$PATH:[PATH_TO_FLUTTER_GIT_DIRECTORY]/flutter/bin"
+    ```
+  </Accordion>
+  
+  <Accordion title="CocoaPods installation fails on macOS">
+    Try updating Ruby and reinstalling CocoaPods:
+    
+    ```bash
+    brew install ruby
+    gem install cocoapods
+    pod setup
+    ```
+  </Accordion>
+  
+  <Accordion title="Android licenses not accepted">
+    Run the following command and accept all licenses:
+    
+    ```bash
+    flutter doctor --android-licenses
+    ```
+  </Accordion>
+  
+  <Accordion title="Dependency resolution fails">
+    Clear Flutter's cache and reinstall dependencies:
+    
+    ```bash
+    flutter clean
+    flutter pub cache clean
+    flutter pub get
+    ```
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,424 @@
+---
+title: "CollectiblesLogic"
+description: "Controller for managing collectible artifacts, tracking discovery states, and persistence"
+---
+
+## Overview
+
+The `CollectiblesLogic` class manages the collection of discoverable artifacts in the Wonderous app. It tracks the state of each collectible (lost, discovered, or explored), persists this data locally, and integrates with native home widgets to display recently discovered items.
+
+## Class Definition
+
+```dart
+class CollectiblesLogic with ThrottledSaveLoadMixin {
+  @override
+  String get fileName => 'collectibles.dat';
+  
+  final List<CollectibleData> all = collectiblesData;
+  late final statesById = ValueNotifier<Map<String, int>>({});
+}
+```
+
+## Properties
+
+<ParamField path="all" type="List<CollectibleData>">
+  Contains all 24 collectible artifacts (3 per wonder). This is a static list loaded from `collectiblesData`.
+</ParamField>
+
+<ParamField path="statesById" type="ValueNotifier<Map<String, int>>">
+  A reactive map tracking the current state of each collectible by its ID. States are defined by `CollectibleState` constants.
+</ParamField>
+
+<ParamField path="discoveredCount" type="int">
+  Read-only count of collectibles in the "discovered" state.
+</ParamField>
+
+<ParamField path="exploredCount" type="int">
+  Read-only count of collectibles in the "explored" state.
+</ParamField>
+
+<ParamField path="fileName" type="String">
+  The filename used for persisting collectible states. Returns `'collectibles.dat'`.
+</ParamField>
+
+## Collectible States
+
+Each collectible can be in one of three states:
+
+```dart
+class CollectibleState {
+  static const int lost = 0;       // Not yet found
+  static const int discovered = 1; // Found but not viewed in detail
+  static const int explored = 2;   // Viewed in detail
+}
+```
+
+## Methods
+
+### init()
+
+Initializes the native widget service for home screen integration.
+
+```dart
+void init()
+```
+
+**Example:**
+
+```dart
+collectiblesLogic.init();
+```
+
+### load()
+
+Loads saved collectible states from local storage. Inherited from `ThrottledSaveLoadMixin`.
+
+```dart
+Future<void> load()
+```
+
+**Example:**
+
+```dart
+await collectiblesLogic.load();
+print('Loaded ${collectiblesLogic.discoveredCount} discovered items');
+```
+
+### setState()
+
+Updates the state of a specific collectible and triggers auto-save.
+
+```dart
+void setState(String id, int state)
+```
+
+**Parameters:**
+- `id` - The collectible's unique identifier
+- `state` - The new state (use `CollectibleState` constants)
+
+**Side Effects:**
+- Updates the native home widget when an item is discovered
+- Schedules an auto-save operation
+- Triggers count updates
+
+**Example:**
+
+```dart
+// Mark a collectible as discovered
+collectiblesLogic.setState('701645', CollectibleState.discovered);
+
+// Mark as explored after user views details
+collectiblesLogic.setState('701645', CollectibleState.explored);
+```
+
+### fromId()
+
+Retrieves collectible data by its ID.
+
+```dart
+CollectibleData? fromId(String? id)
+```
+
+**Parameters:**
+- `id` - The collectible's unique identifier (can be null)
+
+**Returns:** `CollectibleData` object or `null` if not found
+
+**Example:**
+
+```dart
+final collectible = collectiblesLogic.fromId('701645');
+if (collectible != null) {
+  print('Found: ${collectible.title}');
+}
+```
+
+### forWonder()
+
+Retrieves all collectibles associated with a specific wonder.
+
+```dart
+List<CollectibleData> forWonder(WonderType wonder)
+```
+
+**Parameters:**
+- `wonder` - The wonder type enum value
+
+**Returns:** List of 3 collectibles for the specified wonder
+
+**Example:**
+
+```dart
+final tajCollectibles = collectiblesLogic.forWonder(WonderType.tajMahal);
+print('Taj Mahal has ${tajCollectibles.length} collectibles');
+
+for (var item in tajCollectibles) {
+  print('- ${item.title}');
+}
+```
+
+### getFirstDiscoveredOrNull()
+
+Retrieves the first discovered collectible, sorted by wonder order.
+
+```dart
+CollectibleData? getFirstDiscoveredOrNull()
+```
+
+**Returns:** The first discovered collectible or `null` if none are discovered
+
+**Example:**
+
+```dart
+final firstDiscovered = collectiblesLogic.getFirstDiscoveredOrNull();
+if (firstDiscovered != null) {
+  print('You discovered: ${firstDiscovered.title}');
+}
+```
+
+### isLost()
+
+Checks if a specific collectible for a wonder is in the "lost" state.
+
+```dart
+bool isLost(WonderType wonderType, int i)
+```
+
+**Parameters:**
+- `wonderType` - The wonder to check
+- `i` - The index of the collectible (0-2) for that wonder
+
+**Returns:** `true` if the collectible is lost or doesn't exist
+
+**Example:**
+
+```dart
+// Check if the first collectible for Taj Mahal is lost
+final isLost = collectiblesLogic.isLost(WonderType.tajMahal, 0);
+print('First Taj Mahal collectible is ${isLost ? "lost" : "found"}');
+```
+
+### reset()
+
+Resets all collectibles to the "lost" state and clears home widget data.
+
+```dart
+void reset()
+```
+
+**Side Effects:**
+- Sets all collectibles to `CollectibleState.lost`
+- Clears native home widget data
+- Triggers auto-save
+
+**Example:**
+
+```dart
+collectiblesLogic.reset();
+print('Collection reset complete');
+```
+
+## CollectibleData Structure
+
+Each collectible contains:
+
+```dart
+class CollectibleData {
+  final String title;        // Display name
+  final String iconName;     // Icon identifier
+  final String artifactId;   // Met Museum artifact ID
+  final WonderType wonder;   // Associated wonder
+  late final ImageProvider icon;
+  
+  String get id => artifactId;
+  String get subtitle => wondersLogic.getData(wonder).artifactCulture;
+  String get imageUrl => ArtifactData.getSelfHostedImageUrl(id);
+  String get imageUrlSmall => ArtifactData.getSelfHostedImageUrlSmall(id);
+}
+```
+
+## Collectibles by Wonder
+
+Each wonder has 3 associated collectibles:
+
+### Chichen Itza
+- Pendant (jewelry)
+- Bird Ornament (jewelry)
+- La Prison, à Chichen-Itza (picture)
+
+### Christ the Redeemer
+- Engraved Horn (statue)
+- Fixed fan (jewelry)
+- Handkerchiefs (textile)
+
+### Colosseum
+- Glass hexagonal amphoriskos (vase)
+- Bronze plaque of Mithras (statue)
+- Interno del Colosseo (picture)
+
+### Great Wall of China
+- Biographies of Lian Po and Lin Xiangru (scroll)
+- Jar with Dragon (vase)
+- Panel with Peonies and Butterfly (textile)
+
+### Machu Picchu
+- Eight-Pointed Star Tunic (textile)
+- Camelid figurine (statue)
+- Double Bowl (vase)
+
+### Petra
+- Camel and riders (statue)
+- Vessel (vase)
+- Open bowl (vase)
+
+### Pyramids of Giza
+- Two papyrus fragments (scroll)
+- Fragmentary Face of King Khafre (statue)
+- Jewelry Elements (jewelry)
+
+### Taj Mahal
+- Dagger with Scabbard (jewelry)
+- The House of Bijapur (picture)
+- Panel of Nasta'liq Calligraphy (scroll)
+
+## Usage Examples
+
+### Basic Setup
+
+```dart
+// Access the global CollectiblesLogic instance
+CollectiblesLogic get collectiblesLogic => GetIt.I.get<CollectiblesLogic>();
+
+// Initialize and load (called during app bootstrap)
+collectiblesLogic.init();
+await collectiblesLogic.load();
+```
+
+### Tracking Discovery Progress
+
+```dart
+// Get total progress
+final total = collectiblesLogic.all.length; // 24
+final discovered = collectiblesLogic.discoveredCount;
+final explored = collectiblesLogic.exploredCount;
+final found = discovered + explored;
+
+print('Progress: $found / $total collectibles found');
+print('$discovered awaiting exploration');
+print('$explored fully explored');
+```
+
+### Discovering a Collectible
+
+```dart
+// User finds a collectible during gameplay
+void discoverCollectible(String artifactId) {
+  collectiblesLogic.setState(artifactId, CollectibleState.discovered);
+  
+  final item = collectiblesLogic.fromId(artifactId);
+  print('Discovered: ${item?.title}');
+}
+```
+
+### Viewing Wonder Collectibles
+
+```dart
+// Display collectibles for a specific wonder
+void showWonderCollectibles(WonderType wonder) {
+  final items = collectiblesLogic.forWonder(wonder);
+  final states = collectiblesLogic.statesById.value;
+  
+  for (var item in items) {
+    final state = states[item.id] ?? CollectibleState.lost;
+    final status = state == CollectibleState.lost ? '🔒 Locked' :
+                   state == CollectibleState.discovered ? '✨ New' : '✓ Explored';
+    print('$status - ${item.title}');
+  }
+}
+```
+
+### Reactive UI Updates
+
+```dart
+// Listen to state changes
+collectiblesLogic.statesById.addListener(() {
+  final discovered = collectiblesLogic.discoveredCount;
+  print('Discovered count changed: $discovered');
+  // Update UI
+});
+```
+
+### Checking Completion
+
+```dart
+// Check if all collectibles for a wonder are found
+bool isWonderComplete(WonderType wonder) {
+  final items = collectiblesLogic.forWonder(wonder);
+  final states = collectiblesLogic.statesById.value;
+  
+  return items.every((item) {
+    final state = states[item.id] ?? CollectibleState.lost;
+    return state != CollectibleState.lost;
+  });
+}
+
+// Check overall completion
+bool isCollectionComplete() {
+  final found = collectiblesLogic.discoveredCount + 
+                collectiblesLogic.exploredCount;
+  return found == collectiblesLogic.all.length;
+}
+```
+
+## Persistence
+
+The class uses `ThrottledSaveLoadMixin` for automatic persistence:
+
+- **Auto-save**: Changes are automatically saved after a short delay
+- **File location**: `collectibles.dat` in the app's data directory
+- **Format**: JSON map of artifact IDs to state integers
+- **Throttling**: Multiple rapid changes are batched into a single save operation
+
+## Native Widget Integration
+
+When a collectible is discovered, the home widget is updated with:
+
+- **Title**: The collectible's name
+- **Subtitle**: The artifact's date
+- **Image**: A base64-encoded thumbnail
+- **Count**: Total number of discovered items
+
+## Registration
+
+The `CollectiblesLogic` instance is registered as a singleton using GetIt:
+
+```dart
+void registerSingletons() {
+  GetIt.I.registerLazySingleton<CollectiblesLogic>(() => CollectiblesLogic());
+}
+```
+
+## Initialization Flow
+
+The `CollectiblesLogic` initialization is part of the app's bootstrap process:
+
+```dart
+Future<void> bootstrap() async {
+  // ... previous initialization steps
+  
+  // Collectibles
+  collectiblesLogic.init();
+  await collectiblesLogic.load();
+  
+  // ... remaining initialization
+}
+```
+
+## Related Classes
+
+- `CollectibleData` - Data structure for each collectible
+- `CollectibleState` - State constants (lost, discovered, explored)
+- `WonderType` - Enum linking collectibles to wonders
+- `ArtifactAPILogic` - Fetches detailed artifact data
+- `NativeWidgetService` - Updates home screen widgets
+- `ThrottledSaveLoadMixin` - Provides persistence functionality

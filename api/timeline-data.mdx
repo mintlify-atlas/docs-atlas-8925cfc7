@@ -1,0 +1,294 @@
+---
+title: "TimelineData"
+description: "Data models for timeline events and historical milestones displayed in the app"
+---
+
+## Overview
+
+The timeline data models provide structures for representing historical events, both specific to individual wonders and global historical milestones. These are used to create interactive timelines throughout the app.
+
+**Location:** `lib/logic/data/timeline_data.dart`
+
+## TimelineEvent Class
+
+A simple data class representing a single historical event.
+
+**Location:** `lib/logic/data/timeline_data.dart:3`
+
+### Class Definition
+
+```dart
+class TimelineEvent {
+  TimelineEvent(this.year, this.description);
+  final int year;
+  final String description;
+}
+```
+
+### Properties
+
+<ResponseField name="year" type="int" required>
+  The year the event occurred (negative values represent BCE, positive values represent CE)
+</ResponseField>
+
+<ResponseField name="description" type="String" required>
+  Human-readable description of the historical event
+</ResponseField>
+
+### Usage Example
+
+```dart
+// Create a timeline event
+final event = TimelineEvent(-2560, 'Great Pyramid of Giza constructed');
+
+print(event.year);        // -2560 (2560 BCE)
+print(event.description); // "Great Pyramid of Giza constructed"
+
+// Display year with proper formatting
+final displayYear = event.year < 0 
+    ? '${event.year.abs()} BCE' 
+    : '${event.year} CE';
+print(displayYear); // "2560 BCE"
+```
+
+## GlobalEventsData Class
+
+Contains a comprehensive list of major world historical events spanning from 2900 BCE to 1969 CE.
+
+**Location:** `lib/logic/data/timeline_data.dart:9`
+
+### Class Definition
+
+```dart
+class GlobalEventsData {
+  final globalEvents = [
+    TimelineEvent(-2900, \$strings.timelineEvent2900bce),
+    TimelineEvent(-2700, \$strings.timelineEvent2700bce),
+    // ... 52 total events
+    TimelineEvent(1969, \$strings.timelineEvent1969ce),
+  ];
+}
+```
+
+### Properties
+
+<ResponseField name="globalEvents" type="List<TimelineEvent>">
+  A list of 54 major historical events covering approximately 4,900 years of history
+</ResponseField>
+
+## Timeline Event Coverage
+
+The global timeline includes events across major historical periods:
+
+### Ancient History (Before 500 CE)
+
+```dart
+TimelineEvent(-2900, timelineEvent2900bce), // Early Bronze Age
+TimelineEvent(-2560, timelineEvent2560bce), // Great Pyramid construction
+TimelineEvent(-776, timelineEvent776bce),   // First Olympic Games
+TimelineEvent(-753, timelineEvent753bce),   // Founding of Rome
+TimelineEvent(-447, timelineEvent447bce),   // Parthenon construction
+TimelineEvent(-44, timelineEvent44bce),     // Julius Caesar assassinated
+TimelineEvent(79, timelineEvent79ce),       // Vesuvius eruption
+```
+
+### Medieval Period (500-1500 CE)
+
+```dart
+TimelineEvent(500, timelineEvent500ce),   // Fall of Western Roman Empire
+TimelineEvent(632, timelineEvent632ce),   // Death of Muhammad
+TimelineEvent(800, timelineEvent800ce),   // Charlemagne crowned
+TimelineEvent(1077, timelineEvent1077ce), // Walk to Canossa
+TimelineEvent(1227, timelineEvent1227ce), // Death of Genghis Khan
+TimelineEvent(1347, timelineEvent1347ce), // Black Death begins
+TimelineEvent(1492, timelineEvent1492ce), // Columbus reaches Americas
+```
+
+### Modern Era (1500-Present)
+
+```dart
+TimelineEvent(1760, timelineEvent1760ce), // Industrial Revolution begins
+TimelineEvent(1789, timelineEvent1789ce), // French Revolution
+TimelineEvent(1914, timelineEvent1914ce), // World War I begins
+TimelineEvent(1939, timelineEvent1939ce), // World War II begins
+TimelineEvent(1969, timelineEvent1969ce), // Moon landing
+```
+
+## Wonder-Specific Timeline Events
+
+Each `WonderData` object includes its own timeline via the `events` property:
+
+```dart
+// In WonderData class
+final Map<int, String> events;
+```
+
+### Example: Chichen Itza Timeline
+
+**Location:** `lib/logic/data/wonders_data/chichen_itza_data.dart:54`
+
+```dart
+events: {
+  600: \$strings.chichenItza600ce,   // City founded
+  832: \$strings.chichenItza832ce,   // Major construction period
+  998: \$strings.chichenItza998ce,   // Political changes
+  1100: \$strings.chichenItza1100ce, // Decline begins
+  1527: \$strings.chichenItza1527ce, // Spanish conquest
+  1535: \$strings.chichenItza1535ce, // Final abandonment
+}
+```
+
+## Usage Examples
+
+### Working with Global Events
+
+```dart
+import 'package:wonders/logic/data/timeline_data.dart';
+
+final globalData = GlobalEventsData();
+
+// Get all global events
+final allEvents = globalData.globalEvents;
+print('Total events: ${allEvents.length}'); // 54
+
+// Filter events by time period
+final ancientEvents = allEvents.where((e) => e.year < 0).toList();
+final modernEvents = allEvents.where((e) => e.year > 1500).toList();
+
+// Find events in a specific range
+final medievalEvents = allEvents
+    .where((e) => e.year >= 500 && e.year <= 1500)
+    .toList();
+
+// Sort events chronologically (already sorted in source)
+allEvents.sort((a, b) => a.year.compareTo(b.year));
+
+// Display formatted timeline
+for (final event in allEvents) {
+  final yearLabel = event.year < 0 
+      ? '${event.year.abs()} BCE' 
+      : '${event.year} CE';
+  print('$yearLabel: ${event.description}');
+}
+```
+
+### Working with Wonder Events
+
+```dart
+import 'package:wonders/logic/data/wonders_data/chichen_itza_data.dart';
+
+final wonder = ChichenItzaData();
+
+// Get wonder-specific events
+final events = wonder.events;
+
+// Iterate through events
+events.forEach((year, description) {
+  print('$year CE: $description');
+});
+
+// Get events as a sorted list
+final eventList = events.entries
+    .map((e) => TimelineEvent(e.key, e.value))
+    .toList()
+  ..sort((a, b) => a.year.compareTo(b.year));
+
+// Find earliest and latest events
+final years = events.keys.toList()..sort();
+final startYear = years.first;  // 600
+final endYear = years.last;     // 1535
+
+print('Wonder timeline: $startYear - $endYear CE');
+```
+
+### Merging Global and Wonder Events
+
+```dart
+// Create a combined timeline
+List<TimelineEvent> createMergedTimeline(WonderData wonder) {
+  final globalData = GlobalEventsData();
+  final combined = <TimelineEvent>[];
+  
+  // Add global events
+  combined.addAll(globalData.globalEvents);
+  
+  // Add wonder-specific events
+  wonder.events.forEach((year, description) {
+    combined.add(TimelineEvent(year, description));
+  });
+  
+  // Sort chronologically
+  combined.sort((a, b) => a.year.compareTo(b.year));
+  
+  // Filter to wonder's time period
+  return combined.where((e) => 
+    e.year >= wonder.startYr && e.year <= wonder.endYr
+  ).toList();
+}
+
+final chichenItza = ChichenItzaData();
+final timeline = createMergedTimeline(chichenItza);
+// Returns events from 550-1550 CE combining global and Chichen Itza events
+```
+
+### Formatting Display Years
+
+```dart
+String formatYear(int year) {
+  if (year < 0) {
+    return '${year.abs()} BCE';
+  } else if (year == 0) {
+    return '1 BCE/1 CE'; // Year 0 doesn't exist in historical calendar
+  } else {
+    return '$year CE';
+  }
+}
+
+// Usage
+final event = TimelineEvent(-2560, 'Pyramids built');
+print(formatYear(event.year)); // "2560 BCE"
+
+final modernEvent = TimelineEvent(1969, 'Moon landing');
+print(formatYear(modernEvent.year)); // "1969 CE"
+```
+
+## Localization
+
+Event descriptions use the localization system (`$strings`) to support multiple languages:
+
+```dart
+// Event descriptions are localized
+TimelineEvent(-2560, \$strings.timelineEvent2560bce)
+
+// English: "Great Pyramid of Giza constructed"
+// Spanish: "Se construye la Gran Pirámide de Giza"
+// French: "Construction de la Grande Pyramide de Gizeh"
+```
+
+## Year Representation
+
+- **Negative values** represent years Before Common Era (BCE)
+- **Positive values** represent years in Common Era (CE)
+- Year 0 does not exist in the Gregorian calendar (1 BCE → 1 CE)
+
+| Value | Represents |
+|-------|------------|
+| -2560 | 2560 BCE |
+| -1 | 1 BCE |
+| 1 | 1 CE |
+| 2024 | 2024 CE |
+
+## Related Models
+
+- [WonderData](/api/wonder-data) - Contains wonder-specific timeline events via `events` property
+- [ArtifactData](/api/artifact-data) - Artifacts have temporal information (`objectBeginYear`, `objectEndYear`)
+
+## Complete Event List
+
+The `GlobalEventsData` includes 54 events spanning:
+- **Earliest event**: 2900 BCE
+- **Latest event**: 1969 CE  
+- **Time span**: ~4,869 years
+- **Average spacing**: ~90 years between events
+
+Events are pre-loaded and localized, making them ready for immediate display in timeline visualizations.

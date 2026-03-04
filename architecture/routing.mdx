@@ -1,0 +1,321 @@
+---
+title: Routing
+description: GoRouter setup, navigation patterns, and deep linking in Wonderous
+---
+
+## Overview
+
+Wonderous uses [GoRouter](https://pub.dev/packages/go_router) for declarative routing and navigation. The routing system is defined in `lib/router.dart` and provides type-safe navigation, deep linking support, and a centralized route configuration.
+
+## ScreenPaths Class
+
+The `ScreenPaths` class provides centralized path definitions for all routes in the application:
+
+```dart
+class ScreenPaths {
+  static String splash = '/';
+  static String intro = '/welcome';
+  static String home = '/home';
+  static String settings = '/settings';
+
+  static String wonderDetails(WonderType type, {required int tabIndex}) => 
+    '$home/wonder/${type.name}?t=$tabIndex';
+
+  // Dynamically nested pages
+  static String video(String id) => _appendToCurrentPath('/video/$id');
+  static String search(WonderType type) => _appendToCurrentPath('/search/${type.name}');
+  static String maps(WonderType type) => _appendToCurrentPath('/maps/${type.name}');
+  static String timeline(WonderType? type) => _appendToCurrentPath('/timeline?type=${type?.name ?? ""}');
+  static String artifact(String id, {bool append = true}) =>
+      append ? _appendToCurrentPath('/artifact/$id') : '/artifact/$id';
+  static String collection(String id) => _appendToCurrentPath('/collection${id.isEmpty ? '' : '?id=$id'}');
+}
+```
+
+### Dynamic Path Building
+
+The `_appendToCurrentPath` method enables nested navigation by appending new paths to the current route:
+
+```dart
+static String _appendToCurrentPath(String newPath) {
+  final newPathUri = Uri.parse(newPath);
+  final currentUri = appRouter.routeInformationProvider.value.uri;
+  Map<String, dynamic> params = Map.of(currentUri.queryParameters);
+  params.addAll(newPathUri.queryParameters);
+  Uri? loc = Uri(
+    path: '${currentUri.path}/${newPathUri.path}'.replaceAll('//', '/'),
+    queryParameters: params,
+  );
+  return loc.toString();
+}
+```
+
+This allows modals and overlays to be stacked on top of existing routes while preserving navigation context.
+
+## Router Configuration
+
+The main router is defined as a `GoRouter` instance:
+
+```dart
+final appRouter = GoRouter(
+  redirect: _handleRedirect,
+  errorPageBuilder: (context, state) => 
+    MaterialPage(child: PageNotFound(state.uri.toString())),
+  routes: [
+    ShellRoute(
+      builder: (context, router, navigator) {
+        return WondersAppScaffold(child: navigator);
+      },
+      routes: [...]
+    ),
+  ],
+);
+```
+
+### ShellRoute Pattern
+
+All routes are wrapped in a `ShellRoute` that provides the `WondersAppScaffold`, ensuring consistent app structure across all screens.
+
+## Route Definitions
+
+### AppRoute Class
+
+Wonderous uses a custom `AppRoute` class that extends `GoRoute` to simplify route declarations:
+
+```dart
+class AppRoute extends GoRoute {
+  AppRoute(
+    String path,
+    Widget Function(GoRouterState s) builder, {
+    List<GoRoute> routes = const [],
+    this.useFade = false,
+  }) : super(
+    path: path,
+    routes: routes,
+    pageBuilder: (context, state) {
+      final pageContent = Scaffold(
+        body: builder(state),
+        resizeToAvoidBottomInset: false,
+      );
+      if (useFade || $styles.disableAnimations) {
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: pageContent,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        );
+      }
+      return CupertinoPage(child: pageContent);
+    },
+  );
+  final bool useFade;
+}
+```
+
+This provides:
+- Automatic `Scaffold` wrapping
+- Optional fade transitions via `useFade` flag
+- Platform-appropriate page transitions (Cupertino vs Material)
+- Support for nested routes
+
+### Main Routes
+
+```dart
+routes: [
+  AppRoute(ScreenPaths.splash, (_) => Container(color: $styles.colors.greyStrong)),
+  AppRoute(ScreenPaths.intro, (_) => IntroScreen()),
+  AppRoute(
+    ScreenPaths.home,
+    (_) => HomeScreen(),
+    routes: [
+      _timelineRoute,
+      _collectionRoute,
+      AppRoute(
+        'wonder/:detailsType',
+        (s) {
+          int tab = int.tryParse(s.uri.queryParameters['t'] ?? '') ?? 0;
+          return WonderDetailsScreen(
+            type: _parseWonderType(s.pathParameters['detailsType']),
+            tabIndex: tab,
+          );
+        },
+        useFade: true,
+        routes: [
+          _timelineRoute,
+          _collectionRoute,
+          _artifactRoute,
+          // Video, Search, Maps routes...
+        ],
+      ),
+    ],
+  ),
+]
+```
+
+### Reusable Route Definitions
+
+Common routes are defined as getters for reuse across the route tree:
+
+```dart
+AppRoute get _artifactRoute => AppRoute(
+  'artifact/:artifactId',
+  (s) => ArtifactDetailsScreen(artifactId: s.pathParameters['artifactId']!),
+);
+
+AppRoute get _timelineRoute => AppRoute(
+  'timeline',
+  (s) => TimelineScreen(type: _tryParseWonderType(s.uri.queryParameters['type']!)),
+);
+
+AppRoute get _collectionRoute => AppRoute(
+  'collection',
+  (s) => CollectionScreen(fromId: s.uri.queryParameters['id'] ?? ''),
+  routes: [_artifactRoute],
+);
+```
+
+## Navigation Patterns
+
+### Programmatic Navigation
+
+```dart
+// Navigate to a wonder details page
+context.go(ScreenPaths.wonderDetails(currentWonder.type, tabIndex: 0));
+
+// Navigate to home
+context.go(ScreenPaths.home);
+
+// Pop current route
+context.pop();
+
+// Check if can pop
+if (context.canPop()) {
+  context.pop();
+}
+```
+
+### Full-Screen Dialogs
+
+For modal overlays, Wonderous uses a custom dialog route method in `AppLogic`:
+
+```dart
+Future<T?> showFullscreenDialogRoute<T>(
+  BuildContext context,
+  Widget child, {
+  bool transparent = false,
+}) async {
+  return await Navigator.of(context).push<T>(
+    PageRoutes.dialog<T>(child, duration: $styles.times.pageTransition),
+  );
+}
+
+// Usage:
+WonderType? pickedWonder = await appLogic.showFullscreenDialogRoute<WonderType>(
+  context,
+  HomeMenu(data: currentWonder),
+  transparent: true,
+);
+```
+
+## Redirect Logic
+
+The router includes redirect logic to handle app initialization and deep linking:
+
+```dart
+String? _handleRedirect(BuildContext context, GoRouterState state) {
+  // Prevent navigation away from splash during bootstrap
+  if (!appLogic.isBootstrapComplete && state.uri.path != ScreenPaths.splash) {
+    debugPrint('Redirecting from ${state.uri.path} to ${ScreenPaths.splash}.');
+    _initialDeeplink ??= state.uri.toString();
+    return ScreenPaths.splash;
+  }
+  
+  // Redirect away from splash after bootstrap
+  if (appLogic.isBootstrapComplete && state.uri.path == ScreenPaths.splash) {
+    debugPrint('Redirecting from ${state.uri.path} to ${ScreenPaths.home}');
+    return ScreenPaths.home;
+  }
+  
+  return null; // No redirect needed
+}
+```
+
+## Deep Linking
+
+Deep links are captured during app initialization and stored for later navigation:
+
+```dart
+String? get initialDeeplink => _initialDeeplink;
+String? _initialDeeplink;
+
+// In AppLogic.bootstrap():
+if (showIntro) {
+  appRouter.go(ScreenPaths.intro);
+} else {
+  appRouter.go(initialDeeplink ?? ScreenPaths.home);
+}
+```
+
+The redirect handler stores any deep link that arrives during bootstrap, then navigates to it once initialization is complete.
+
+## Parameter Parsing
+
+### Path Parameters
+
+```dart
+// Route definition
+AppRoute(
+  'wonder/:detailsType',
+  (s) => WonderDetailsScreen(
+    type: _parseWonderType(s.pathParameters['detailsType']),
+  ),
+)
+```
+
+### Query Parameters
+
+```dart
+// Parse tab index from query parameter
+int tab = int.tryParse(s.uri.queryParameters['t'] ?? '') ?? 0;
+
+// Parse optional wonder type
+WonderType? type = _tryParseWonderType(s.uri.queryParameters['type']!);
+```
+
+### Type-Safe Parsing
+
+```dart
+WonderType _parseWonderType(String? value) {
+  const fallback = WonderType.chichenItza;
+  if (value == null) return fallback;
+  return _tryParseWonderType(value) ?? fallback;
+}
+
+WonderType? _tryParseWonderType(String value) => 
+  WonderType.values.asNameMap()[value];
+```
+
+## Error Handling
+
+Unmatched routes display a custom error page:
+
+```dart
+errorPageBuilder: (context, state) => 
+  MaterialPage(child: PageNotFound(state.uri.toString())),
+```
+
+## Best Practices
+
+1. **Use ScreenPaths**: Always use the `ScreenPaths` class for route paths to ensure type safety and consistency
+2. **Nested Routes**: Use nested route definitions for logical grouping (e.g., all wonder-related routes under the wonder route)
+3. **Query Parameters**: Use query parameters for optional navigation state (e.g., tab index)
+4. **Path Parameters**: Use path parameters for required identifiers (e.g., artifact ID, wonder type)
+5. **Reusable Routes**: Define commonly-used routes (timeline, collection, artifact) as reusable getters
+6. **Transitions**: Use `useFade: true` for detail views to provide smooth transitions
+
+## Related Files
+
+- `lib/router.dart` - Main router configuration
+- `lib/logic/app_logic.dart` - Bootstrap and navigation utilities
+- `lib/ui/common/utils/page_routes.dart` - Custom page route implementations

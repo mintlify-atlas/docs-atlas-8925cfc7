@@ -1,0 +1,262 @@
+---
+title: "Theming System"
+description: "Comprehensive guide to Wonderous theming, colors, typography, and styles"
+---
+
+## Overview
+
+Wonderous implements a sophisticated theming system centered around the `AppStyle` class, providing consistent colors, typography, spacing, and visual elements throughout the app.
+
+## Color System
+
+### AppColors Class
+
+The `AppColors` class (defined in `lib/styles/colors.dart:6`) defines the app's core color palette:
+
+```dart
+final Color accent1 = Color(0xFFE4935D);   // Primary accent
+final Color accent2 = Color(0xFFBEABA1);   // Secondary accent
+final Color accent3 = Color(0xFFC47642);   // Tertiary accent
+final Color offWhite = Color(0xFFF8ECE5); // Background
+final Color caption = Color(0xFF7D7873);  // Caption text
+final Color body = Color(0xFF514F4D);      // Body text
+final Color greyStrong = Color(0xFF272625);
+final Color greyMedium = Color(0xFF9D9995);
+final Color white = Colors.white;
+final Color black = Color(0xFF1E1B18);     // Must match web/manifest.json
+```
+
+### Wonder-Specific Colors
+
+Each wonder has unique foreground and background colors defined in `lib/styles/wonders_color_extensions.dart:3`:
+
+```dart
+extension WonderColorExtensions on WonderType {
+  Color get bgColor {
+    return switch (this) {
+      WonderType.pyramidsGiza => Color(0xFF16184D),
+      WonderType.greatWall => Color(0xFF642828),
+      WonderType.petra => Color(0xFF444B9B),
+      WonderType.colosseum => Color(0xFF1E736D),
+      WonderType.chichenItza => Color(0xFF164F2A),
+      WonderType.machuPicchu => Color(0xFF0E4064),
+      WonderType.tajMahal => Color(0xFFC96454),
+      WonderType.christRedeemer => Color(0xFF1C4D46),
+    };
+  }
+  
+  Color get fgColor { /* ... */ }
+}
+```
+
+### Color Utilities
+
+The color system includes helper methods:
+
+- **`shift(Color c, double d)`** (`lib/styles/colors.dart:24`) - Shifts color HSL values
+- **`ColorFilter` extension** (`lib/styles/wonders_color_extensions.dart:31`) - Creates color filters for images
+
+### Theme Data Generation
+
+The `toThemeData()` method (`lib/styles/colors.dart:26`) generates Material `ThemeData`:
+
+```dart
+ThemeData toThemeData() {
+  ColorScheme colorScheme = ColorScheme(
+    brightness: isDark ? Brightness.dark : Brightness.light,
+    primary: accent1,
+    surface: offWhite,
+    onSurface: txtColor,
+    // ...
+  );
+  return ThemeData.from(textTheme: txtTheme, colorScheme: colorScheme)
+    .copyWith(
+      textSelectionTheme: TextSelectionThemeData(cursorColor: accent1),
+      highlightColor: accent1,
+    );
+}
+```
+
+## Typography System
+
+### Font Families
+
+Wonderous uses four primary font families configured in `pubspec.yaml:103-131`:
+
+1. **Cinzel** - Decorative font for quotes and drop caps
+2. **Yeseva** - Display font for wonder titles
+3. **Tenor** - Sans-serif for general titles
+4. **Raleway** - Primary content font with multiple weights (Regular, Medium, Bold, ExtraBold)
+
+Additional fonts:
+- **MaShanZheng** - Chinese quote font
+- **B612Mono** - Monospace titles
+
+### Locale-Aware Font Selection
+
+Fonts are automatically selected based on the current locale (`lib/styles/styles.dart:83-95`):
+
+```dart
+final Map<String, TextStyle> _quoteFonts = {
+  'en': TextStyle(fontFamily: 'Cinzel'),
+  'zh': TextStyle(fontFamily: 'MaShanZheng'),
+};
+
+TextStyle _getFontForLocale(Map<String, TextStyle> fonts) {
+  if (localeLogic.isLoaded) {
+    return fonts.entries
+      .firstWhere((x) => x.key == $strings.localeName, 
+                  orElse: () => fonts.entries.first)
+      .value;
+  }
+  return fonts.entries.first.value;
+}
+```
+
+### Text Styles
+
+Predefined text styles with responsive scaling (`lib/styles/styles.dart:97-175`):
+
+| Style | Font | Size | Use Case |
+|-------|------|------|----------|
+| `wonderTitle` | Yeseva | 64px | Wonder names |
+| `h1` | Tenor | 64px | Main headings |
+| `h2` | Tenor | 32px | Section headings |
+| `h3` | Tenor | 24px | Subsection headings |
+| `h4` | Raleway | 14px | Small headings |
+| `body` | Raleway | 16px | Body text |
+| `bodySmall` | Raleway | 14px | Small body text |
+| `quote1` | Cinzel | 32px | Large quotes |
+| `quote2` | Cinzel | 21px | Medium quotes |
+| `caption` | Raleway | 14px | Italic captions |
+| `btn` | Raleway | 14px | Button text |
+| `dropCase` | Cinzel | 56px | Drop capitals |
+
+All text styles are created via the `_createFont()` method which handles:
+- DPI scaling based on device size
+- Line height calculation
+- Letter spacing (as percentage)
+- Font weight
+
+## Responsive Scaling
+
+The `AppStyle` class implements device-aware scaling (`lib/styles/styles.dart:10-25`):
+
+```dart
+AppStyle({Size? screenSize, this.disableAnimations = false}) {
+  final shortestSide = screenSize.shortestSide;
+  const tabletXl = 1000;
+  const tabletLg = 800;
+  if (shortestSide > tabletXl) {
+    scale = 1.2;      // Large tablets
+  } else if (shortestSide > tabletLg) {
+    scale = 1.1;      // Medium tablets
+  } else {
+    scale = 1;        // Phones
+  }
+}
+```
+
+This scale factor affects:
+- Text sizes
+- Spacing/insets
+- All size-dependent values
+
+## Spacing & Layout
+
+### Insets
+
+Consistent spacing values scaled by device (`lib/styles/styles.dart:222-234`):
+
+```dart
+class _Insets {
+  late final double xxs = 4 * _scale;
+  late final double xs = 8 * _scale;
+  late final double sm = 16 * _scale;
+  late final double md = 24 * _scale;
+  late final double lg = 32 * _scale;
+  late final double xl = 48 * _scale;
+  late final double xxl = 56 * _scale;
+  late final double offset = 80 * _scale;
+}
+```
+
+Access via: `$styles.insets.md`
+
+### Corners
+
+Border radius values (`lib/styles/styles.dart:207-211`):
+
+```dart
+late final double sm = 4;   // Small radius
+late final double md = 8;   // Medium radius
+late final double lg = 32;  // Large radius
+```
+
+### Sizes
+
+Layout constraints (`lib/styles/styles.dart:214-219`):
+
+```dart
+double get maxContentWidth1 => 800;
+double get maxContentWidth2 => 600;
+double get maxContentWidth3 => 500;
+final Size minAppSize = Size(380, 650);
+```
+
+## Shadows
+
+Text shadow presets (`lib/styles/styles.dart:237-247`):
+
+```dart
+final textSoft = [Shadow(color: Colors.black.withValues(alpha: .25), ...)];
+final text = [Shadow(color: Colors.black.withValues(alpha: .6), ...)];
+final textStrong = [Shadow(color: Colors.black.withValues(alpha: .6), ...)];
+```
+
+## Usage Example
+
+```dart
+import 'package:wonders/common_libs.dart';
+
+Widget build(BuildContext context) {
+  return Container(
+    padding: EdgeInsets.all($styles.insets.lg),
+    decoration: BoxDecoration(
+      color: $styles.colors.offWhite,
+      borderRadius: BorderRadius.circular($styles.corners.md),
+    ),
+    child: Text(
+      'Welcome to Wonderous',
+      style: $styles.text.h1.copyWith(
+        color: $styles.colors.accent1,
+        shadows: $styles.shadows.textSoft,
+      ),
+    ),
+  );
+}
+```
+
+## Accessing the Theme
+
+The global `$styles` instance provides access to all theming values:
+
+```dart
+$styles.colors.accent1      // Colors
+$styles.text.body          // Typography
+$styles.insets.md          // Spacing
+$styles.corners.lg         // Border radius
+$styles.shadows.text       // Shadows
+$styles.times.med          // Animation durations
+$styles.sizes.maxContentWidth1  // Layout sizes
+```
+
+## High Contrast Mode
+
+The theme supports high contrast mode:
+
+```dart
+AppStyle(highContrast: true)
+```
+
+This can be used to enhance accessibility for users with visual impairments.

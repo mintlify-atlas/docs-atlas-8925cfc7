@@ -1,0 +1,663 @@
+---
+title: Quick Start
+description: Get Wonderous running on your device in minutes. Step-by-step guide from cloning to launching the app on iOS, Android, Web, or Desktop.
+---
+
+# Quick Start Guide
+
+This guide will help you run Wonderous on your device as quickly as possible. If you haven't set up your development environment yet, check out the [Installation](/installation) guide first.
+
+## Prerequisites Checklist
+
+Before proceeding, make sure you have:
+
+<Tip>
+  - ✓ Flutter SDK installed (3.32.0 or higher)
+  - ✓ Development environment set up for your target platform
+  - ✓ Git installed on your system
+  - ✓ A code editor (VS Code, Android Studio, or IntelliJ recommended)
+</Tip>
+
+## Clone and Setup
+
+<Steps>
+  <Step title="Clone the Repository">
+    Open your terminal and clone the Wonderous repository:
+    
+    ```bash
+    git clone https://github.com/gskinnerTeam/flutter-wonderous-app.git
+    cd flutter-wonderous-app
+    ```
+    
+    **Expected output:**
+    ```
+    Cloning into 'flutter-wonderous-app'...
+    remote: Enumerating objects: 5234, done.
+    remote: Counting objects: 100% (1234/1234), done.
+    remote: Compressing objects: 100% (789/789), done.
+    remote: Total 5234 (delta 456), reused 1123 (delta 367)
+    Receiving objects: 100% (5234/5234), 45.67 MiB | 8.23 MiB/s, done.
+    Resolving deltas: 100% (2567/2567), done.
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Download all required packages:
+    
+    ```bash
+    flutter pub get
+    ```
+    
+    **Expected output:**
+    ```
+    Running "flutter pub get" in flutter-wonderous-app...
+    Resolving dependencies...
+    + collection 1.17.0
+    + flutter_animate 4.5.0
+    + go_router 17.0.1
+    + get_it 7.2.0
+    + provider 6.0.5
+    ... (more packages)
+    Changed 58 dependencies!
+    ```
+    
+    <Note>
+      This step downloads all dependencies defined in `pubspec.yaml`. It may take a few minutes depending on your internet connection.
+    </Note>
+  </Step>
+
+  <Step title="Verify Setup">
+    Check that everything is configured correctly:
+    
+    ```bash
+    flutter doctor
+    ```
+    
+    **Expected output:**
+    ```
+    Doctor summary (to see all details, run flutter doctor -v):
+    [✓] Flutter (Channel stable, 3.32.0, on macOS 14.0)
+    [✓] Android toolchain - develop for Android devices
+    [✓] Xcode - develop for iOS and macOS
+    [✓] Chrome - develop for the web
+    [✓] Android Studio (version 2023.1)
+    [✓] VS Code (version 1.85.0)
+    [✓] Connected device (3 available)
+    [✓] Network resources
+
+    • No issues found!
+    ```
+  </Step>
+</Steps>
+
+## Running Wonderous
+
+Choose your target platform and follow the instructions below:
+
+<Tabs>
+  <Tab title="iOS">
+    ### Run on iOS
+    
+    <Steps>
+      <Step title="Connect Device or Start Simulator">
+        **Option 1: Physical Device**
+        - Connect your iPhone or iPad via USB
+        - Trust the computer on your device when prompted
+        
+        **Option 2: Simulator**
+        ```bash
+        # List available simulators
+        flutter devices
+        
+        # Open iOS Simulator
+        open -a Simulator
+        ```
+      </Step>
+      
+      <Step title="Launch the App">
+        Run Wonderous on iOS:
+        
+        ```bash
+        flutter run -d ios
+        ```
+        
+        **Expected output:**
+        ```
+        Launching lib/main.dart on iPhone 15 Pro in debug mode...
+        Running Xcode build...
+        └─Compiling, linking and signing...                     5.2s
+        Xcode build done.                                       23.4s
+        Syncing files to device iPhone 15 Pro...               1,234ms
+
+        Flutter run key commands.
+        r Hot reload. 🔥🔥🔥
+        R Hot restart.
+        h List all available interactive commands.
+        d Detach (terminate "flutter run" but leave application running).
+        c Clear the screen
+        q Quit (terminate the application on the device).
+
+        💪 Running with sound null safety 💪
+
+        An Observatory debugger and profiler on iPhone 15 Pro is available at:
+        http://127.0.0.1:12345/
+        The Flutter DevTools debugger and profiler on iPhone 15 Pro is available at:
+        http://127.0.0.1:9100?uri=http://127.0.0.1:12345/
+        ```
+      </Step>
+      
+      <Step title="First Launch">
+        On first launch, the app will:
+        1. Display a native splash screen
+        2. Initialize singleton services
+        3. Load wonder data and assets
+        4. Present the intro screen or home screen
+        
+        <Note>
+          The iOS version uses **Impeller rendering** by default for enhanced performance and smooth animations.
+        </Note>
+      </Step>
+    </Steps>
+    
+    ### iOS-Specific Commands
+    
+    ```bash
+    # Run on specific iOS device
+    flutter run -d [device-id]
+    
+    # Run in release mode (optimized performance)
+    flutter run -d ios --release
+    
+    # Build iOS app bundle
+    flutter build ios
+    ```
+  </Tab>
+  
+  <Tab title="Android">
+    ### Run on Android
+    
+    <Steps>
+      <Step title="Connect Device or Start Emulator">
+        **Option 1: Physical Device**
+        - Enable Developer Mode on your Android device
+        - Enable USB Debugging in Developer Options
+        - Connect via USB and authorize the computer
+        
+        **Option 2: Emulator**
+        ```bash
+        # List available emulators
+        flutter emulators
+        
+        # Launch an emulator
+        flutter emulators --launch [emulator-id]
+        ```
+      </Step>
+      
+      <Step title="Verify Device Connection">
+        Check connected devices:
+        
+        ```bash
+        flutter devices
+        ```
+        
+        **Expected output:**
+        ```
+        2 connected devices:
+
+        Pixel 7 Pro (mobile) • ABCD1234567890 • android-arm64 • Android 14 (API 34)
+        Chrome (web)         • chrome         • web-javascript • Google Chrome 120.0
+        ```
+      </Step>
+      
+      <Step title="Launch the App">
+        Run Wonderous on Android:
+        
+        ```bash
+        flutter run -d android
+        ```
+        
+        **Expected output:**
+        ```
+        Launching lib/main.dart on Pixel 7 Pro in debug mode...
+        Running Gradle task 'assembleDebug'...
+        ✓ Built build/app/outputs/flutter-apk/app-debug.apk.
+        Installing build/app/outputs/flutter-apk/app.apk...        2.3s
+        Waiting for Pixel 7 Pro to report its views...                  12ms
+        Syncing files to device Pixel 7 Pro...                         345ms
+
+        Flutter run key commands.
+        r Hot reload. 🔥🔥🔥
+        R Hot restart.
+        h List all available interactive commands.
+        d Detach (terminate "flutter run" but leave application running).
+        c Clear the screen
+        q Quit (terminate the application on the device).
+
+        💪 Running with sound null safety 💪
+
+        An Observatory debugger and profiler on Pixel 7 Pro is available at:
+        http://127.0.0.1:12345/
+        ```
+      </Step>
+    </Steps>
+    
+    ### Android-Specific Commands
+    
+    ```bash
+    # Run on specific Android device
+    flutter run -d [device-id]
+    
+    # Run in release mode
+    flutter run -d android --release
+    
+    # Build Android APK
+    flutter build apk
+    
+    # Build Android App Bundle (for Play Store)
+    flutter build appbundle
+    ```
+  </Tab>
+  
+  <Tab title="Web">
+    ### Run on Web
+    
+    <Steps>
+      <Step title="Standard Web Build">
+        Run Wonderous in your default web browser:
+        
+        ```bash
+        flutter run -d chrome
+        ```
+        
+        **Expected output:**
+        ```
+        Launching lib/main.dart on Chrome in debug mode...
+        Waiting for connection from debug service on Chrome...              3.2s
+        This app is linked to the debug service: ws://127.0.0.1:12345/ws
+        Debug service listening on ws://127.0.0.1:12345/ws
+
+        💪 Running with sound null safety 💪
+
+        🔥  To hot restart changes while running, press "r" or "R".
+        For a more detailed help message, press "h". To quit, press "q".
+
+        An Observatory debugger and profiler on Chrome is available at:
+        http://127.0.0.1:12345/
+        The Flutter DevTools debugger and profiler on Chrome is available at:
+        http://127.0.0.1:9100?uri=http://127.0.0.1:12345/
+        
+        Application started at: http://localhost:54321/
+        ```
+      </Step>
+      
+      <Step title="WebAssembly Build (WASM)">
+        For optimized web performance, run with WASM:
+        
+        ```bash
+        flutter run -d chrome --wasm
+        ```
+        
+        <Tip>
+          The production version of Wonderous at [wonderous.app/web](https://wonderous.app/web/) uses WASM for better performance. WASM provides near-native speed and smaller bundle sizes.
+        </Tip>
+      </Step>
+      
+      <Step title="Access the App">
+        Your browser will automatically open to `http://localhost:[port]`. The app will load with:
+        - Full wonder browsing experience
+        - Interactive timelines and maps
+        - Photo galleries
+        - Artifact search
+      </Step>
+    </Steps>
+    
+    ### Web-Specific Commands
+    
+    ```bash
+    # Run on specific browser
+    flutter run -d edge
+    flutter run -d firefox
+    
+    # Build for web deployment
+    flutter build web
+    
+    # Build with WASM
+    flutter build web --wasm
+    
+    # Serve built web app
+    cd build/web
+    python -m http.server 8000
+    ```
+  </Tab>
+  
+  <Tab title="Desktop">
+    ### Run on Desktop
+    
+    Wonderous supports macOS, Windows, and Linux desktop platforms.
+    
+    <Steps>
+      <Step title="Run on macOS">
+        ```bash
+        flutter run -d macos
+        ```
+        
+        **Expected output:**
+        ```
+        Launching lib/main.dart on macOS in debug mode...
+        Building macOS application...
+        Syncing files to macOS...                                         234ms
+
+        Flutter run key commands.
+        r Hot reload. 🔥🔥🔥
+        R Hot restart.
+        ```
+      </Step>
+      
+      <Step title="Run on Windows">
+        ```bash
+        flutter run -d windows
+        ```
+      </Step>
+      
+      <Step title="Run on Linux">
+        ```bash
+        flutter run -d linux
+        ```
+      </Step>
+    </Steps>
+    
+    ### Desktop-Specific Commands
+    
+    ```bash
+    # Build desktop application
+    flutter build macos
+    flutter build windows
+    flutter build linux
+    
+    # Run in release mode
+    flutter run -d macos --release
+    ```
+    
+    <Note>
+      Desktop builds provide additional features like:
+      - Window resizing and fullscreen support
+      - Keyboard shortcuts
+      - Native system integration
+    </Note>
+  </Tab>
+</Tabs>
+
+## Understanding the App Structure
+
+When you launch Wonderous, here's what happens:
+
+<CodeGroup>
+```dart lib/main.dart
+void main() async {
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  
+  // Keep native splash screen up until app is finished bootstrapping
+  if (!kIsWeb) {
+    FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  }
+  
+  GoRouter.optionURLReflectsImperativeAPIs = true;
+
+  // Start app and register singletons
+  registerSingletons();
+  runApp(WondersApp());
+  
+  // Bootstrap app logic
+  await appLogic.bootstrap();
+
+  // Remove splash screen when bootstrap is complete
+  FlutterNativeSplash.remove();
+}
+```
+
+```dart lib/main.dart (Singletons)
+void registerSingletons() {
+  // Top level app controller
+  GetIt.I.registerLazySingleton<AppLogic>(() => AppLogic());
+  // Wonders data
+  GetIt.I.registerLazySingleton<WondersLogic>(() => WondersLogic());
+  // Timeline / Events
+  GetIt.I.registerLazySingleton<TimelineLogic>(() => TimelineLogic());
+  // Artifact Search
+  GetIt.I.registerLazySingleton<ArtifactAPILogic>(() => ArtifactAPILogic());
+  // Settings
+  GetIt.I.registerLazySingleton<SettingsLogic>(() => SettingsLogic());
+  // And more...
+}
+```
+</CodeGroup>
+
+### Key Architecture Components
+
+<CardGroup cols={2}>
+  <Card title="Dependency Injection" icon="syringe">
+    Uses **GetIt** for service location and dependency injection, making the codebase modular and testable.
+  </Card>
+  
+  <Card title="Routing" icon="route">
+    Implements **go_router** for type-safe, declarative navigation across all platforms.
+  </Card>
+  
+  <Card title="State Management" icon="database">
+    Combines **Provider** for reactive state and **GetIt** mixins for accessing services.
+  </Card>
+  
+  <Card title="Internationalization" icon="language">
+    Supports multiple languages using Flutter's built-in i18n system with locale detection.
+  </Card>
+</CardGroup>
+
+## Development Workflow
+
+### Hot Reload
+
+Flutter's hot reload lets you see changes instantly:
+
+```bash
+# After making code changes, press 'r' in the terminal
+r  # Hot reload - preserves app state
+R  # Hot restart - resets app state
+```
+
+**Example workflow:**
+1. Make a change to a UI widget
+2. Press `r` to hot reload
+3. See the changes instantly without losing app state
+
+### Debugging
+
+<CodeGroup>
+```bash DevTools
+# Open Flutter DevTools
+flutter pub global activate devtools
+flutter pub global run devtools
+```
+
+```bash Debug Output
+# Run with verbose logging
+flutter run -v
+
+# Run with specific debug options
+flutter run --enable-software-rendering
+flutter run --trace-startup
+```
+</CodeGroup>
+
+### Performance Profiling
+
+```bash
+# Run in profile mode for performance testing
+flutter run --profile
+
+# Analyze performance
+flutter analyze
+```
+
+## Exploring Wonderous Features
+
+Once the app is running, try these features:
+
+<Steps>
+  <Step title="Browse Wonders">
+    - Swipe vertically to navigate between different wonders
+    - Tap on a wonder to see detailed information
+    - Explore the immersive animations and transitions
+  </Step>
+  
+  <Step title="View Timeline">
+    - Access the timeline to see historical events from 3000 BCE to 2200 CE
+    - Scroll through different eras
+    - Tap on events for more details
+  </Step>
+  
+  <Step title="Search Artifacts">
+    - Use the artifact search feature
+    - Filter by time range
+    - View high-resolution images from museum collections
+  </Step>
+  
+  <Step title="Collect Items">
+    - Discover collectibles as you explore
+    - View your collection progress
+    - Unlock achievements
+  </Step>
+</Steps>
+
+## Common Development Commands
+
+<AccordionGroup>
+  <Accordion title="Package Management">
+    ```bash
+    # Get dependencies
+    flutter pub get
+    
+    # Upgrade dependencies
+    flutter pub upgrade
+    
+    # Analyze dependencies
+    flutter pub outdated
+    
+    # Clean build artifacts
+    flutter clean
+    ```
+  </Accordion>
+  
+  <Accordion title="Code Quality">
+    ```bash
+    # Analyze code
+    flutter analyze
+    
+    # Format code
+    flutter format lib/
+    
+    # Run tests
+    flutter test
+    
+    # Check dependencies
+    flutter pub run dependency_validator
+    ```
+  </Accordion>
+  
+  <Accordion title="Building Release Versions">
+    ```bash
+    # iOS
+    flutter build ios --release
+    
+    # Android APK
+    flutter build apk --release
+    
+    # Android App Bundle
+    flutter build appbundle --release
+    
+    # Web
+    flutter build web --release --wasm
+    
+    # Desktop
+    flutter build macos --release
+    flutter build windows --release
+    flutter build linux --release
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Explore the Code" icon="code">
+    Start by examining `lib/main.dart` and the wonder data models in `lib/logic/data/`
+  </Card>
+  
+  <Card title="Study the UI" icon="palette">
+    Check out the screen implementations in `lib/ui/screens/` to learn Flutter UI patterns
+  </Card>
+  
+  <Card title="Understand Routing" icon="map">
+    Review `lib/router.dart` to see how navigation is structured using go_router
+  </Card>
+  
+  <Card title="Examine Animations" icon="wand-magic-sparkles">
+    Look at `flutter_animate` usage throughout the UI for inspiration
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Warning>
+  If you encounter issues while running the app, try these solutions:
+</Warning>
+
+<AccordionGroup>
+  <Accordion title="Build failures">
+    ```bash
+    # Clean and rebuild
+    flutter clean
+    flutter pub get
+    flutter run
+    ```
+  </Accordion>
+  
+  <Accordion title="iOS build errors">
+    ```bash
+    # Clean CocoaPods
+    cd ios
+    rm -rf Pods Podfile.lock
+    pod install
+    cd ..
+    flutter run -d ios
+    ```
+  </Accordion>
+  
+  <Accordion title="Android build errors">
+    ```bash
+    # Clean Gradle cache
+    cd android
+    ./gradlew clean
+    cd ..
+    flutter clean
+    flutter run -d android
+    ```
+  </Accordion>
+  
+  <Accordion title="Hot reload not working">
+    Try hot restart instead:
+    ```bash
+    # Press 'R' in terminal (capital R)
+    R
+    ```
+    
+    Or fully restart the app:
+    ```bash
+    q  # Quit
+    flutter run
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  Join the Flutter community on [Discord](https://discord.gg/flutter) or [GitHub Discussions](https://github.com/gskinnerTeam/flutter-wonderous-app/discussions) if you need help!
+</Tip>

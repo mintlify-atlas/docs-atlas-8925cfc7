@@ -1,97 +1,200 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Wonderous Documentation"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative bg-gradient-to-br from-[#E4935D] via-[#C47642] to-[#1E1B18] dark:from-[#1E1B18] dark:via-[#3d2f26] dark:to-[#E4935D]/30 py-20">
+  <div className="max-w-6xl mx-auto px-6 lg:px-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-6">
+          Wonderous Documentation
+        </h1>
+        <p className="text-xl sm:text-2xl text-white/90 mb-8 max-w-2xl">
+          Explore the world's most famous structures through a stunning Flutter showcase app that pushes the boundaries of visual fidelity and mobile performance.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a
+            href="/quick-start"
+            className="inline-flex items-center px-8 py-3.5 rounded-lg bg-white text-[#E4935D] font-semibold text-lg hover:bg-white/90 transition-colors no-underline"
+          >
+            Get Started
+          </a>
+          <a
+            href="/architecture/overview"
+            className="inline-flex items-center px-8 py-3.5 rounded-lg border-2 border-white/30 bg-white/10 text-white font-semibold text-lg hover:bg-white/20 transition-colors no-underline"
+          >
+            Explore Architecture
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5 hidden lg:block">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#E4935D]/20 to-transparent blur-3xl"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+    Quick Start
+  </h2>
+  <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
+    Get Wonderous running on your device in just a few minutes.
+  </p>
+  
+  <Steps>
+    <Step title="Install Flutter">
+      Ensure you have Flutter installed and set up. Wonderous requires Flutter 3.32.0 or later.
+      
+      ```bash
+      flutter --version
+      ```
+      
+      <Accordion title="Expected output">
+        ```
+        Flutter 3.32.0 • channel stable
+        ```
+      </Accordion>
+    </Step>
+    
+    <Step title="Clone the repository">
+      Clone the Wonderous repository from GitHub.
+      
+      ```bash
+      git clone https://github.com/gskinnerTeam/flutter-wonderous-app.git
+      cd flutter-wonderous-app
+      ```
+    </Step>
+    
+    <Step title="Get dependencies">
+      Install all required dependencies using Flutter's package manager.
+      
+      ```bash
+      flutter pub get
+      ```
+    </Step>
+    
+    <Step title="Run the app">
+      Launch Wonderous on your preferred device or simulator.
+      
+      ```bash
+      # For iOS
+      flutter run -d ios
+      
+      # For Android
+      flutter run -d android
+      
+      # For Web (WASM)
+      flutter run -d chrome --wasm
+      ```
+      
+      <Note>
+        The app uses Impeller rendering by default on iOS for enhanced performance.
+      </Note>
+    </Step>
+  </Steps>
+</div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+    Explore by Feature
+  </h2>
+  <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
+    Discover the rich features that make Wonderous a showcase of Flutter's capabilities.
+  </p>
+  
+  <CardGroup cols={2}>
+    <Card title="8 World Wonders" icon="monument" href="/features/wonders">
+      Explore interactive experiences for the Great Wall, Petra, Colosseum, Chichen Itza, Machu Picchu, Taj Mahal, Christ the Redeemer, and the Pyramids of Giza.
+    </Card>
+    <Card title="Historical Timeline" icon="timeline" href="/features/timeline">
+      Navigate through 5,000 years of history with events spanning from 3000 BCE to present day.
+    </Card>
+    <Card title="Artifact Search" icon="magnifying-glass" href="/features/artifacts">
+      Search and explore thousands of artifacts powered by the Metropolitan Museum of Art API.
+    </Card>
+    <Card title="Photo Galleries" icon="images" href="/features/photo-gallery">
+      Browse stunning photography from Unsplash integrated seamlessly into each wonder's experience.
+    </Card>
+    <Card title="Collectibles System" icon="star" href="/features/collectibles">
+      Track progress and discover hidden collectibles as you explore each wonder.
+    </Card>
+    <Card title="Multi-language Support" icon="language" href="/customization/localization">
+      Experience Wonderous in English or Chinese with full localization support.
+    </Card>
+  </CardGroup>
+</div>
 
-## Make it yours
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+    Architecture Deep Dive
+  </h2>
+  <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
+    Learn how Wonderous is architected to deliver exceptional performance and visual quality.
+  </p>
+  
+  <CardGroup cols={3}>
+    <Card title="Project Structure" icon="folder-tree" href="/architecture/project-structure">
+      Understand the organization of code, assets, and resources.
+    </Card>
+    <Card title="State Management" icon="diagram-project" href="/architecture/state-management">
+      Learn how Wonderous manages state using GetIt and Provider patterns.
+    </Card>
+    <Card title="Routing System" icon="route" href="/architecture/routing">
+      Explore the GoRouter-based navigation with deep linking support.
+    </Card>
+    <Card title="Data Models" icon="database" href="/architecture/data-models">
+      Discover the data structures powering wonders, artifacts, and collectibles.
+    </Card>
+    <Card title="UI Components" icon="palette" href="/architecture/ui-components">
+      Build with reusable widgets and custom illustrations.
+    </Card>
+    <Card title="Performance" icon="gauge-high" href="/architecture/performance">
+      Optimize rendering with Impeller and advanced Flutter techniques.
+    </Card>
+  </CardGroup>
+</div>
 
-Design a docs site that looks great and empowers your users.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+    API Reference
+  </h2>
+  <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
+    Complete reference documentation for all logic classes, data models, and UI components.
+  </p>
+  
+  <CardGroup cols={2}>
+    <Card title="Logic Classes" icon="code" href="/api/app-logic">
+      AppLogic, WondersLogic, TimelineLogic, CollectiblesLogic, and more.
+    </Card>
+    <Card title="Data Models" icon="table" href="/api/wonder-data">
+      WonderData, ArtifactData, CollectibleData, and TimelineData structures.
+    </Card>
+    <Card title="UI Components" icon="window" href="/api/screens">
+      Screens, common widgets, and wonder illustrations.
+    </Card>
+    <Card title="Integrations" icon="plug" href="/integrations/unsplash">
+      Unsplash, Google Maps, and Metropolitan Museum API integrations.
+    </Card>
+  </CardGroup>
+</div>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<div className="mt-20 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl bg-gradient-to-r from-[#E4935D] to-[#C47642] dark:from-[#E4935D]/20 dark:to-[#C47642]/20 dark:border dark:border-[#E4935D]/30 p-12 text-center">
+    <h2 className="text-3xl sm:text-4xl font-bold text-white dark:text-gray-100 mb-4">
+      Ready to explore?
+    </h2>
+    <p className="text-xl text-white/90 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+      Start building with Wonderous today and discover what Flutter can do.
+    </p>
+    <a
+      href="/installation"
+      className="inline-flex items-center px-8 py-3.5 rounded-lg bg-white dark:bg-gray-900 text-[#E4935D] font-semibold text-lg hover:bg-white/90 dark:hover:bg-gray-800 transition-colors no-underline"
+    >
+      Get Started Now
+    </a>
+  </div>
+</div>

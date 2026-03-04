@@ -1,0 +1,240 @@
+---
+title: "ArtifactData"
+description: "Data model representing historical artifacts from the Metropolitan Museum of Art associated with each wonder"
+---
+
+## Overview
+
+The `ArtifactData` class represents historical artifacts sourced from the Metropolitan Museum of Art (MET) API. These artifacts are associated with each Wonder of the World and provide cultural and historical context.
+
+**Location:** `lib/logic/data/artifact_data.dart:1`
+
+## Class Definition
+
+```dart
+class ArtifactData {
+  ArtifactData({
+    required this.objectId,
+    required this.title,
+    required this.image,
+    required this.date,
+    required this.period,
+    required this.country,
+    required this.medium,
+    required this.dimension,
+    required this.classification,
+    required this.culture,
+    required this.objectType,
+    required this.objectBeginYear,
+    required this.objectEndYear,
+  });
+  
+  static const String baseSelfHostedImagePath = 'https://www.wonderous.info/met/';
+}
+```
+
+## Properties
+
+### Identification
+
+<ResponseField name="objectId" type="String" required>
+  Unique artifact identifier used for MET server calls and image URLs
+</ResponseField>
+
+<ResponseField name="title" type="String" required>
+  The artifact's title or name
+</ResponseField>
+
+### Visual Content
+
+<ResponseField name="image" type="String" required>
+  Primary image URL for the artifact (can have multiple images)
+</ResponseField>
+
+### Temporal Information
+
+<ResponseField name="objectBeginYear" type="int" required>
+  Starting year of artifact creation
+</ResponseField>
+
+<ResponseField name="objectEndYear" type="int" required>
+  Ending year of artifact creation
+</ResponseField>
+
+<ResponseField name="date" type="String" required>
+  Human-readable date description of creation (e.g., "7th–9th century")
+</ResponseField>
+
+<ResponseField name="period" type="String" required>
+  Historical time period of creation
+</ResponseField>
+
+### Origin & Classification
+
+<ResponseField name="country" type="String" required>
+  Country of origin
+</ResponseField>
+
+<ResponseField name="culture" type="String" required>
+  Cultural attribution of the artifact (e.g., "Mayan", "Roman")
+</ResponseField>
+
+<ResponseField name="classification" type="String" required>
+  Type classification of the artifact
+</ResponseField>
+
+<ResponseField name="objectType" type="String" required>
+  Specific type of object (e.g., "coin", "vase", "cup")
+</ResponseField>
+
+### Physical Characteristics
+
+<ResponseField name="medium" type="String" required>
+  Art medium or material used
+</ResponseField>
+
+<ResponseField name="dimension" type="String" required>
+  Physical dimensions (width and height) of the artifact
+</ResponseField>
+
+## Image URL Methods
+
+The class provides several static and instance methods for generating image URLs at different resolutions:
+
+### selfHostedImageUrl
+
+```dart
+String get selfHostedImageUrl => getSelfHostedImageUrl(objectId);
+```
+
+Returns the full-resolution image URL for this artifact.
+
+### selfHostedImageUrlSmall
+
+```dart
+String get selfHostedImageUrlSmall => getSelfHostedImageUrlSmall(objectId);
+```
+
+Returns a small (600px) image URL for this artifact.
+
+### selfHostedImageUrlMedium
+
+```dart
+String get selfHostedImageUrlMedium => getSelfHostedImageUrlMedium(objectId);
+```
+
+Returns a medium (2000px) image URL for this artifact.
+
+## Static Methods
+
+### getSelfHostedImageUrl
+
+```dart
+static String getSelfHostedImageUrl(String id) => '$baseSelfHostedImagePath$id.jpg';
+```
+
+Generates a full-resolution image URL for a given artifact ID.
+
+**Example:** `https://www.wonderous.info/met/503940.jpg`
+
+### getSelfHostedImageUrlSmall
+
+```dart
+static String getSelfHostedImageUrlSmall(String id) => '$baseSelfHostedImagePath${id}_600.jpg';
+```
+
+Generates a small (600px width) image URL for a given artifact ID.
+
+**Example:** `https://www.wonderous.info/met/503940_600.jpg`
+
+### getSelfHostedImageUrlMedium
+
+```dart
+static String getSelfHostedImageUrlMedium(String id) => '$baseSelfHostedImagePath${id}_2000.jpg';
+```
+
+Generates a medium (2000px width) image URL for a given artifact ID.
+
+**Example:** `https://www.wonderous.info/met/503940_2000.jpg`
+
+## Usage Example
+
+```dart
+// Create an artifact instance
+final artifact = ArtifactData(
+  objectId: '503940',
+  title: 'Double Whistle',
+  image: 'https://images.metmuseum.org/...',
+  objectBeginYear: 600,
+  objectEndYear: 900,
+  date: '7th–9th century',
+  period: 'Classic',
+  country: 'Mexico',
+  culture: 'Mayan',
+  classification: 'Musical Instruments',
+  objectType: 'whistle',
+  medium: 'Ceramic',
+  dimension: 'H. 3 1/2 in. (8.9 cm)',
+);
+
+// Access artifact properties
+print(artifact.title); // "Double Whistle"
+print(artifact.culture); // "Mayan"
+print(artifact.date); // "7th–9th century"
+
+// Get image URLs at different resolutions
+final fullImage = artifact.selfHostedImageUrl;
+final thumbnail = artifact.selfHostedImageUrlSmall;
+final mediumImage = artifact.selfHostedImageUrlMedium;
+
+// Use static methods to generate URLs from ID
+final imageUrl = ArtifactData.getSelfHostedImageUrl('503940');
+// Returns: 'https://www.wonderous.info/met/503940.jpg'
+```
+
+## Integration with MET Museum
+
+Artifacts can be viewed on the Metropolitan Museum of Art website using the URL pattern:
+
+```
+https://www.metmuseum.org/art/collection/search/{objectId}
+```
+
+**Example:** For artifact ID `503940`:
+```
+https://www.metmuseum.org/art/collection/search/503940
+```
+
+## Data Sources
+
+Artifact data is sourced from:
+- **Metropolitan Museum of Art API** - For artifact metadata
+- **Self-hosted images** - Cached on `wonderous.info` for performance
+
+## Related Models
+
+- [WonderData](/api/wonder-data) - References artifacts via `highlightArtifacts` and `hiddenArtifacts` properties
+- [CollectibleData](/api/collectible-data) - Uses `ArtifactData` methods for image URLs
+- HighlightData - Similar structure for featured artifacts (defined in `lib/logic/data/highlight_data.dart`)
+
+## JSON Structure
+
+When working with the MET API, artifact data typically follows this structure:
+
+```json
+{
+  "objectID": "503940",
+  "title": "Double Whistle",
+  "primaryImage": "https://images.metmuseum.org/...",
+  "objectBeginDate": 600,
+  "objectEndDate": 900,
+  "objectDate": "7th–9th century",
+  "period": "Classic",
+  "country": "Mexico",
+  "culture": "Mayan",
+  "classification": "Musical Instruments",
+  "objectName": "whistle",
+  "medium": "Ceramic",
+  "dimensions": "H. 3 1/2 in. (8.9 cm)"
+}
+```

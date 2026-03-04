@@ -1,0 +1,347 @@
+---
+title: Timeline
+description: Interactive global timeline spanning 5000+ years of history with wonder construction events
+---
+
+The Timeline feature provides a vertically scrollable visualization of historical events from 3000 BCE to 2200 CE, combining global historical milestones with wonder construction dates.
+
+## Timeline Range
+
+The timeline spans over 5000 years of history:
+
+```dart lib/logic/wonders_logic.dart
+final int timelineStartYear = -3000;  // 3000 BCE
+final int timelineEndYear = 2200;     // 2200 CE
+```
+
+## Timeline Data Model
+
+Events are represented by the `TimelineEvent` class:
+
+```dart lib/logic/data/timeline_data.dart
+class TimelineEvent {
+  TimelineEvent(this.year, this.description);
+  final int year;
+  final String description;
+}
+```
+
+## Global Historical Events
+
+The `GlobalEventsData` class contains major world events:
+
+```dart lib/logic/data/timeline_data.dart
+class GlobalEventsData {
+  final globalEvents = [
+    TimelineEvent(-2900, 'Earliest Egyptian Hieroglyphs'),
+    TimelineEvent(-2700, 'Old Kingdom Period Begins, Egypt'),
+    TimelineEvent(-2560, 'Great Pyramid of Giza Completed'),
+    TimelineEvent(-2500, 'The Sphinx Constructed'),
+    TimelineEvent(-776, 'First Olympic Games'),
+    TimelineEvent(-753, 'Founding of Rome'),
+    TimelineEvent(-447, 'Construction of the Parthenon'),
+    TimelineEvent(-44, 'Assassination of Julius Caesar'),
+    TimelineEvent(79, 'Eruption of Mount Vesuvius'),
+    TimelineEvent(632, 'Death of Prophet Muhammad'),
+    TimelineEvent(1492, 'Columbus reaches the Americas'),
+    TimelineEvent(1789, 'French Revolution begins'),
+    TimelineEvent(1969, 'Moon landing'),
+    // ... 40+ total events
+  ];
+}
+```
+
+## Timeline Logic
+
+The `TimelineLogic` class merges global events with wonder construction events:
+
+```dart lib/logic/timeline_logic.dart
+class TimelineLogic {
+  List<TimelineEvent> events = [];
+
+  void init() {
+    // Create an event for each wonder, and merge it with the list of GlobalEvents
+    events = [
+      ...GlobalEventsData().globalEvents,
+      ...wondersLogic.all.map(
+        (w) => TimelineEvent(
+          w.startYr,
+          'Construction of ' + w.title,
+        ),
+      ),
+    ];
+  }
+}
+```
+
+This creates a unified timeline combining:
+- 40+ global historical events
+- 8 wonder construction events
+- Chronologically sorted by year
+
+## Timeline Screen UI
+
+The timeline features a sophisticated vertically scrolling interface:
+
+```dart lib/ui/screens/timeline/timeline_screen.dart
+class TimelineScreen extends StatefulWidget {
+  final WonderType? type;  // Optional: highlight a specific wonder
+
+  @override
+  State<TimelineScreen> createState() => _TimelineScreenState();
+}
+
+class _TimelineScreenState extends State<TimelineScreen> {
+  final ScrollController _scroller = ScrollController();
+  final _year = ValueNotifier<int>(0);
+
+  @override
+  Widget build(BuildContext context) {
+    const double scrubberSize = 80;
+    const double minSize = 1200;
+    const double maxSize = 5500;
+    
+    return Container(
+      color: $styles.colors.black,
+      child: Column(
+        children: [
+          AppHeader(title: 'Global Timeline'),
+
+          /// Vertically scrolling timeline
+          Expanded(
+            child: _ScrollingViewport(
+              scroller: _scroller,
+              minSize: minSize,
+              maxSize: maxSize,
+              selectedWonder: widget.type,
+              onYearChanged: _handleViewportYearChanged,
+            ),
+          ),
+
+          /// Era Text (Classical, Modern, etc.)
+          ValueListenableBuilder<int>(
+            valueListenable: _year,
+            builder: (_, value, __) => _AnimatedEraText(value),
+          ),
+
+          /// Mini horizontal timeline scrubber
+          _BottomScrubber(
+            _scroller,
+            size: scrubberSize,
+            timelineMinSize: minSize,
+            selectedWonder: widget.type,
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+## Key Components
+
+### Scrolling Viewport
+
+The main scrollable area displays events along a vertical timeline:
+
+- **Year Markers**: Major year labels positioned along the timeline
+- **Event Markers**: Dots indicating event positions
+- **Event Popups**: Cards that appear when hovering/selecting events
+- **Dashed Dividers**: Visual separators with year labels
+
+### Bottom Scrubber
+
+A miniature horizontal timeline that:
+- Shows the full timeline range in a compressed view
+- Indicates current scroll position
+- Allows quick navigation by dragging
+- Highlights the selected wonder (if specified)
+
+### Animated Era Text
+
+Displays the current historical era based on the visible year:
+
+```dart
+class _AnimatedEraText extends StatelessWidget {
+  final int year;
+
+  String _getEraForYear(int year) {
+    if (year < -3000) return 'Ancient Era';
+    if (year < -500) return 'Classical Antiquity';
+    if (year < 500) return 'Classical Era';
+    if (year < 1500) return 'Medieval Period';
+    if (year < 1800) return 'Early Modern';
+    if (year < 1950) return 'Modern Era';
+    return 'Contemporary';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: Duration(milliseconds: 300),
+      child: Text(
+        _getEraForYear(year),
+        key: ValueKey(year),
+        style: TextStyle(fontSize: 20),
+      ),
+    );
+  }
+}
+```
+
+## Timeline Sections
+
+The timeline is divided into logical sections for better organization:
+
+```dart
+class _TimelineSection extends StatelessWidget {
+  final int startYear;
+  final int endYear;
+  final List<TimelineEvent> events;
+  final WonderType? selectedWonder;
+
+  @override
+  Widget build(BuildContext context) {
+    // Filter events within this section's year range
+    final sectionEvents = events.where((e) => 
+      e.year >= startYear && e.year <= endYear
+    ).toList();
+
+    return Column(
+      children: [
+        _DashedDividerWithYear(year: startYear),
+        ...sectionEvents.map((event) => _EventMarker(
+          event: event,
+          isHighlighted: _isWonderEvent(event),
+        )),
+        _DashedDividerWithYear(year: endYear),
+      ],
+    );
+  }
+}
+```
+
+## Event Markers
+
+Events appear as markers along the timeline:
+
+```dart
+class _EventMarkers extends StatelessWidget {
+  final TimelineEvent event;
+  final bool isHighlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      child: Row(
+        children: [
+          // Year label
+          Text(
+            event.year.toString(),
+            style: TextStyle(
+              color: isHighlighted ? accentColor : normalColor,
+              fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          
+          // Event dot
+          Container(
+            width: isHighlighted ? 12 : 8,
+            height: isHighlighted ? 12 : 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isHighlighted ? accentColor : normalColor,
+            ),
+          ),
+          
+          // Event description
+          Expanded(
+            child: Text(event.description),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+## Event Popups
+
+When users interact with events, detailed popup cards appear:
+
+- Event year and description
+- Related images (for wonder events)
+- Context about the historical significance
+- Navigation to related wonder details
+
+## Wonder Integration
+
+When viewing a specific wonder's timeline:
+
+```dart
+// Navigate to timeline with wonder highlight
+context.go(ScreenPaths.timeline(wonderType: WonderType.greatWall));
+
+// Timeline highlights all events related to that wonder
+final wonderEvents = wonder.events.entries.map((e) => 
+  TimelineEvent(e.key, e.value)
+).toList();
+```
+
+Wonder-specific events are visually emphasized:
+- Larger markers
+- Accent color highlighting
+- Wonder icon/image
+- Direct link to wonder details
+
+## Scrolling Controller
+
+The custom scrolling viewport controller manages:
+
+```dart
+class _ScrollingViewportController {
+  final ScrollController scroller;
+  final int minYear;
+  final int maxYear;
+  final double minSize;
+  final double maxSize;
+
+  // Convert scroll position to year
+  int getYearFromOffset(double offset) {
+    final totalYears = maxYear - minYear;
+    final yearPerPixel = totalYears / maxSize;
+    return minYear + (offset * yearPerPixel).round();
+  }
+
+  // Convert year to scroll position
+  double getOffsetFromYear(int year) {
+    final totalYears = maxYear - minYear;
+    final yearsSinceMin = year - minYear;
+    return (yearsSinceMin / totalYears) * maxSize;
+  }
+}
+```
+
+## Performance Optimizations
+
+- **Lazy Loading**: Only render visible events
+- **Viewport Culling**: Events outside viewport are not built
+- **Debounced Updates**: Year changes are debounced to reduce rebuilds
+- **RepaintBoundary**: Isolate expensive widgets
+- **Const Constructors**: Use const where possible
+
+## Accessibility Features
+
+- Semantic labels for all events
+- Scroll announcements
+- Keyboard navigation support
+- High contrast mode support
+- Screen reader optimizations
+
+## User Interactions
+
+1. **Vertical Scroll**: Navigate through time
+2. **Horizontal Scrubber Drag**: Quick jump to specific years
+3. **Event Tap**: Show event details
+4. **Wonder Filter**: View only wonder-related events
+5. **Trackpad Gestures**: Smooth scrolling with momentum

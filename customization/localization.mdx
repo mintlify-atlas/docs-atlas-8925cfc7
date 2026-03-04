@@ -1,0 +1,358 @@
+---
+title: "Localization"
+description: "Multi-language support and localization in Wonderous"
+---
+
+## Overview
+
+Wonderous implements Flutter's official localization system with support for English and Simplified Chinese. The app uses ARB (Application Resource Bundle) files and code generation to provide type-safe, compile-time verified translations.
+
+## Supported Locales
+
+Wonderous currently supports two locales (`lib/l10n/app_localizations.dart:93`):
+
+- **English** (`en`) - Default locale
+- **Simplified Chinese** (`zh`) - Secondary locale
+
+```dart
+static const List<Locale> supportedLocales = <Locale>[
+  Locale('en'), 
+  Locale('zh')
+];
+```
+
+## Configuration
+
+### l10n.yaml
+
+The localization system is configured in `l10n.yaml:1-3`:
+
+```yaml
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+```
+
+This configuration tells Flutter to:
+- Look for ARB files in `lib/l10n/`
+- Use `app_en.arb` as the template
+- Generate `app_localizations.dart` with all translations
+
+### pubspec.yaml
+
+Localization is enabled in `pubspec.yaml:14-15,86`:
+
+```yaml
+dependencies:
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+
+flutter:
+  generate: true  # Enable code generation
+```
+
+## LocaleLogic Class
+
+The `LocaleLogic` class (`lib/logic/locale_logic.dart:6`) manages locale selection and loading:
+
+### Initialization
+
+```dart
+class LocaleLogic {
+  final Locale _defaultLocal = Locale('en');
+  
+  AppLocalizations? _strings;
+  AppLocalizations get strings => _strings!;
+  bool get isLoaded => _strings != null;
+  bool get isEnglish => strings.localeName == 'en';
+  
+  Future<void> load() async {
+    Locale locale = _defaultLocal;
+    
+    // Get saved locale or detect system locale
+    final localeCode = settingsLogic.currentLocale.value 
+                    ?? await findSystemLocale();
+    locale = Locale(localeCode.split('_')[0]);
+    
+    // Validate against supported locales
+    if (!AppLocalizations.supportedLocales.contains(locale)) {
+      locale = _defaultLocal;
+    }
+    
+    // Load translations
+    settingsLogic.currentLocale.value = locale.languageCode;
+    _strings = await AppLocalizations.delegate.load(locale);
+  }
+}
+```
+
+### Runtime Locale Switching
+
+The app supports dynamic locale changes without restart (`lib/logic/locale_logic.dart:29`):
+
+```dart
+Future<void> loadIfChanged(Locale locale) async {
+  bool didChange = _strings?.localeName != locale.languageCode;
+  if (didChange && AppLocalizations.supportedLocales.contains(locale)) {
+    _strings = await AppLocalizations.delegate.load(locale);
+  }
+}
+```
+
+## AppLocalizations
+
+The generated `AppLocalizations` class provides:
+
+### Static Properties
+
+```dart
+// Localization delegates for MaterialApp
+static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = [
+  delegate,
+  GlobalMaterialLocalizations.delegate,
+  GlobalCupertinoLocalizations.delegate,
+  GlobalWidgetsLocalizations.delegate,
+];
+
+// List of supported locales
+static const List<Locale> supportedLocales = [
+  Locale('en'), 
+  Locale('zh')
+];
+```
+
+### Accessing Translations
+
+Translations are accessed via the global `$strings` instance:
+
+```dart
+$strings.appName              // "Wonderous"
+$strings.localeSwapButton     // "简体中文" (in English) / "English" (in Chinese)
+$strings.chichenItzaTitle     // "Chichen Itza"
+```
+
+### Parameterized Translations
+
+Some strings accept parameters (`lib/l10n/app_localizations.dart:111,153,159`):
+
+```dart
+// Simple parameter
+$strings.animatedArrowSemanticSwipe(wonderName)
+// "Explore details about Chichen Itza."
+
+// Multiple parameters
+$strings.collectionLabelCount(5, 24)
+// "5 of 24"
+
+$strings.titleLabelDate("600", "1100")
+// "600 to 1100"
+```
+
+## Integration with MaterialApp
+
+Set up localization in your app root:
+
+```dart
+MaterialApp(
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  locale: Locale('en'), // or dynamic based on user preference
+  // ...
+)
+```
+
+## Locale-Aware Typography
+
+Fonts automatically adapt to the current locale (`lib/styles/styles.dart:57-95`):
+
+```dart
+final Map<String, TextStyle> _titleFonts = {
+  'en': TextStyle(fontFamily: 'Tenor'),
+};
+
+final Map<String, TextStyle> _quoteFonts = {
+  'en': TextStyle(fontFamily: 'Cinzel'),
+  'zh': TextStyle(fontFamily: 'MaShanZheng'),  // Chinese calligraphy
+};
+
+final Map<String, TextStyle> _contentFonts = {
+  'en': TextStyle(
+    fontFamily: 'Raleway',
+    fontFeatures: [FontFeature.enable('kern')],
+  ),
+};
+
+TextStyle get quoteFont => _getFontForLocale(_quoteFonts);
+```
+
+This ensures:
+- English quotes use the elegant Cinzel font
+- Chinese quotes use the traditional MaShanZheng calligraphy font
+- Automatic fallback to the first available font if locale not found
+
+## Translation Files Structure
+
+Translations are organized in ARB files:
+
+- `lib/l10n/app_en.arb` - English translations (template)
+- `lib/l10n/app_zh.arb` - Chinese translations
+
+Generated files (do not edit manually):
+- `lib/l10n/app_localizations.dart` - Base class
+- `lib/l10n/app_localizations_en.dart` - English implementation
+- `lib/l10n/app_localizations_zh.dart` - Chinese implementation
+
+## Adding New Translations
+
+### Step 1: Add to Template ARB
+
+Edit `lib/l10n/app_en.arb`:
+
+```json
+{
+  "myNewString": "Hello World",
+  "@myNewString": {
+    "description": "Greeting message"
+  },
+  
+  "greetUser": "Hello {userName}!",
+  "@greetUser": {
+    "description": "Personalized greeting",
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
+  }
+}
+```
+
+### Step 2: Add Translations
+
+Edit `lib/l10n/app_zh.arb`:
+
+```json
+{
+  "myNewString": "你好世界",
+  "greetUser": "你好 {userName}!"
+}
+```
+
+### Step 3: Regenerate
+
+Run Flutter's code generation:
+
+```bash
+flutter gen-l10n
+```
+
+Or simply run your app - generation happens automatically:
+
+```bash
+flutter run
+```
+
+### Step 4: Use the Translation
+
+```dart
+Text($strings.myNewString);
+Text($strings.greetUser("Alice"));
+```
+
+## Locale Switcher UI
+
+Wonderous provides a locale switcher control (`lib/ui/common/controls/locale_switcher.dart`):
+
+```dart
+// The locale swap button shows the *other* language
+// When viewing in English, shows "简体中文"
+// When viewing in Chinese, shows "English"
+Text($strings.localeSwapButton)
+```
+
+## System Locale Detection
+
+The app automatically detects the system locale on first launch (`lib/logic/locale_logic.dart:16`):
+
+```dart
+final localeCode = settingsLogic.currentLocale.value 
+                ?? await findSystemLocale();
+```
+
+If the system locale is not supported, it falls back to English.
+
+## Debug Locale Override
+
+For testing, you can force a specific locale (`lib/logic/locale_logic.dart:18-20`):
+
+```dart
+if (kDebugMode) {
+  locale = Locale('zh'); // Uncomment to test Chinese
+}
+```
+
+## Best Practices
+
+### 1. Use Semantic Keys
+
+Choose descriptive keys that indicate context:
+
+```dart
+// Good
+"artifactDetailsLabelDate": "Date"
+"homeMenuButtonExplore": "Explore the timeline"
+
+// Avoid
+"label1": "Date"
+"button2": "Explore the timeline"
+```
+
+### 2. Provide Descriptions
+
+Always add descriptions to help translators:
+
+```json
+{
+  "@key": {
+    "description": "Shown on the artifact details page"
+  }
+}
+```
+
+### 3. Handle Plurals
+
+For strings with plurals, use ICU message syntax:
+
+```json
+{
+  "itemCount": "{count, plural, =0{No items} =1{One item} other{{count} items}}"
+}
+```
+
+### 4. Keep Context in Mind
+
+Remember that word order and grammar vary between languages. Use placeholders instead of string concatenation:
+
+```dart
+// Good
+"greetUser": "Hello {userName}!"
+
+// Avoid
+"hello" + userName + "!"  // Doesn't work for all languages
+```
+
+## Translation Coverage
+
+Wonderous includes translations for:
+
+- App navigation and UI controls
+- All 8 wonder names and descriptions
+- Artifact browser and details
+- Timeline and events
+- Collection and discovery messages
+- Accessibility labels
+- Error messages
+- Help text
+
+Over 200 strings are fully localized across both languages.

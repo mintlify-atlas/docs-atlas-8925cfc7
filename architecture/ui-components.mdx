@@ -1,0 +1,599 @@
+---
+title: UI Components
+description: Screen structure, common widgets, and reusable UI components
+---
+
+## Overview
+
+Wonderous uses a component-based architecture with reusable widgets organized by function. The UI layer is completely separated from business logic, delegating all decisions to logic classes.
+
+## Screen Structure
+
+### Screen Organization
+
+Screens are located in `lib/ui/screens/` with a dedicated folder per screen:
+
+```
+lib/ui/screens/
+├── home/
+│   ├── wonders_home_screen.dart
+│   └── widgets/
+├── wonder_details/
+│   ├── wonders_details_screen.dart
+│   └── wonder_details_tab_menu.dart
+├── editorial/
+│   ├── editorial_screen.dart
+│   └── widgets/
+├── artifact/
+│   ├── artifact_details/
+│   ├── artifact_search/
+│   └── artifact_carousel/
+├── collection/
+│   ├── collection_screen.dart
+│   └── widgets/
+├── timeline/
+│   ├── timeline_screen.dart
+│   └── widgets/
+└── ...
+```
+
+### Screen Pattern
+
+Most screens follow this pattern:
+
+```dart
+class HomeScreen extends StatefulWidget with GetItStatefulWidgetMixin {
+  HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> 
+    with SingleTickerProviderStateMixin {
+  // Access logic layer
+  List<WonderData> get _wonders => wondersLogic.all;
+  
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers, load data
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Background layer
+        _buildBackground(),
+        // Middle layer
+        _buildContent(),
+        // Foreground layer
+        _buildFloatingUI(),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    // Clean up controllers
+    super.dispose();
+  }
+}
+```
+
+### Layered Composition
+
+Complex screens use layered `Stack` composition:
+
+- **Background**: Non-interactive elements (gradients, images)
+- **Content**: Main scrollable/interactive content
+- **Foreground**: Overlays, decorations
+- **UI**: Controls, buttons, headers
+
+## Common Widgets
+
+### Buttons
+
+Location: `lib/ui/common/controls/buttons.dart`
+
+#### AppBtn
+
+The core button widget that all other buttons extend:
+
+```dart
+AppBtn(
+  onPressed: () => print('pressed'),
+  semanticLabel: 'Submit',
+  child: Text('SUBMIT'),
+)
+
+AppBtn.from(
+  text: 'Submit',
+  icon: AppIcons.next,
+  onPressed: () => print('pressed'),
+  isSecondary: true,
+)
+
+AppBtn.basic(
+  onPressed: () => print('pressed'),
+  semanticLabel: 'Close',
+  child: Icon(Icons.close),
+  padding: EdgeInsets.zero,
+)
+```
+
+Features:
+- Automatic press effects
+- Hover effects (web)
+- Focus indicators
+- Semantic labels
+- Customizable padding, colors, borders
+- Circular or rounded rectangle shapes
+
+#### CircleIconBtn
+
+Circular icon buttons:
+
+```dart
+CircleIconBtn(
+  icon: AppIcons.menu,
+  onPressed: () => _openMenu(),
+  semanticLabel: 'Open menu',
+  bgColor: $styles.colors.greyStrong,
+)
+```
+
+#### BackBtn
+
+Standardized back button with automatic navigation:
+
+```dart
+BackBtn(
+  onPressed: () => context.pop(),
+  semanticLabel: 'Go back',
+)
+
+BackBtn.close(
+  onPressed: () => Navigator.pop(context),
+)
+```
+
+Features:
+- Automatic pop behavior
+- ESC key support
+- Customizable icon
+
+### Headers
+
+Location: `lib/ui/common/controls/app_header.dart`
+
+```dart
+AppHeader(
+  title: 'Timeline',
+  subtitle: 'Historical Events',
+  showBackBtn: true,
+  onBack: () => context.pop(),
+  trailing: (context) => CircleIconBtn(
+    icon: AppIcons.search,
+    onPressed: _handleSearch,
+    semanticLabel: 'Search',
+  ),
+)
+```
+
+Features:
+- Title and subtitle support
+- Back button (optional)
+- Trailing widget slot
+- Safe area handling
+- Transparent or solid background
+
+### Images
+
+Location: `lib/ui/common/controls/app_image.dart`
+
+```dart
+AppImage(
+  image: NetworkImage(artifact.imageUrl),
+  fit: BoxFit.cover,
+  scale: 1.0,
+)
+```
+
+Provides:
+- Automatic error handling
+- Loading indicators
+- Scale and fit options
+
+### Page Indicators
+
+Location: `lib/ui/common/controls/app_page_indicator.dart`
+
+```dart
+AppPageIndicator(
+  count: wonders.length,
+  controller: _pageController,
+  color: $styles.colors.white,
+  dotSize: 8,
+  onDotPressed: (index) => _jumpToPage(index),
+  semanticPageTitle: 'Wonder',
+)
+```
+
+### Loading Indicators
+
+Location: `lib/ui/common/controls/app_loading_indicator.dart`
+
+```dart
+AppLoadingIndicator(
+  color: $styles.colors.accent1,
+)
+```
+
+## Wonder Illustrations
+
+Location: `lib/ui/wonder_illustrations/`
+
+### WonderIllustration
+
+Convenience wrapper that renders the appropriate illustration:
+
+```dart
+WonderIllustration(
+  WonderType.chichenItza,
+  config: WonderIllustrationConfig.mg(
+    isShowing: true,
+    zoom: 1.05,
+  ),
+)
+```
+
+### WonderIllustrationConfig
+
+Configuration for illustration rendering:
+
+```dart
+class WonderIllustrationConfig {
+  const WonderIllustrationConfig({
+    this.zoom = 1.0,
+    this.isShowing = true,
+    this.enableFg = true,  // foreground
+    this.enableBg = true,  // background
+    this.enableMg = true,  // middleground
+    this.enableHero = true,
+    this.enableAnims = true,
+    this.shortMode = false,
+  });
+}
+```
+
+Factory constructors for common configs:
+
+```dart
+// Background only
+WonderIllustrationConfig.bg(
+  zoom: 1.0,
+  isShowing: true,
+)
+
+// Foreground only
+WonderIllustrationConfig.fg(
+  zoom: 1.0,
+  isShowing: true,
+)
+
+// Middleground only
+WonderIllustrationConfig.mg(
+  zoom: 1.0,
+  isShowing: true,
+)
+```
+
+### Individual Illustrations
+
+Each wonder has a dedicated illustration:
+
+- `ChichenItzaIllustration`
+- `ChristRedeemerIllustration`
+- `ColosseumIllustration`
+- `GreatWallIllustration`
+- `MachuPicchuIllustration`
+- `PetraIllustration`
+- `PyramidsGizaIllustration`
+- `TajMahalIllustration`
+
+Each illustration composes multiple image layers with parallax effects.
+
+### WonderTitleText
+
+Location: `lib/ui/wonder_illustrations/common/wonder_title_text.dart`
+
+Stylized wonder title with automatic formatting:
+
+```dart
+WonderTitleText(
+  wonderData,
+  enableShadows: true,
+)
+```
+
+### AnimatedClouds
+
+Location: `lib/ui/wonder_illustrations/common/animated_clouds.dart`
+
+Animated cloud layer for wonder backgrounds:
+
+```dart
+AnimatedClouds(
+  wonderType: currentWonder.type,
+  opacity: 1,
+)
+```
+
+## Layout Helpers
+
+### Gradient Containers
+
+Location: `lib/ui/common/gradient_container.dart`
+
+```dart
+VtGradient(
+  [$styles.colors.black.withOpacity(0), $styles.colors.black],
+  [0.0, 1.0],
+)
+
+HzGradient(
+  [$styles.colors.white.withOpacity(0), $styles.colors.white],
+  [0.0, 1.0],
+)
+```
+
+### Centered Box
+
+Location: `lib/ui/common/centered_box.dart`
+
+```dart
+CenteredBox(
+  child: Text('Centered content'),
+  width: 400,
+)
+```
+
+### Blend Mask
+
+Location: `lib/ui/common/blend_mask.dart`
+
+Applies blend modes to child widgets:
+
+```dart
+BlendMask(
+  blendMode: BlendMode.multiply,
+  child: Image.asset('background.png'),
+)
+```
+
+## Interaction Widgets
+
+### PreviousNextNavigation
+
+Location: `lib/ui/common/previous_next_navigation.dart`
+
+Keyboard navigation wrapper:
+
+```dart
+PreviousNextNavigation(
+  onPreviousPressed: () => _pageController.previousPage(),
+  onNextPressed: () => _pageController.nextPage(),
+  child: PageView(...),
+)
+```
+
+### FullscreenKeyboardListener
+
+Location: `lib/ui/common/fullscreen_keyboard_listener.dart`
+
+Global keyboard event handling:
+
+```dart
+FullscreenKeyboardListener(
+  onKeyDown: (event) {
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      Navigator.pop(context);
+      return true;
+    }
+    return false;
+  },
+  child: MyScreen(),
+)
+```
+
+### EightWaySwipeDetector
+
+Location: `lib/ui/common/controls/eight_way_swipe_detector.dart`
+
+Detects swipe gestures in 8 directions:
+
+```dart
+EightWaySwipeDetector(
+  onSwipe: (direction) {
+    switch (direction) {
+      case SwipeDirection.up:
+        _handleSwipeUp();
+        break;
+      // ...
+    }
+  },
+  child: MyContent(),
+)
+```
+
+### TrackpadListener
+
+Location: `lib/ui/common/controls/trackpad_listener.dart`
+
+Desktop trackpad gesture support:
+
+```dart
+TrackpadListener(
+  scrollSensitivity: 60,
+  onScroll: (direction) {
+    if (direction.dy < 0) {
+      _showDetails();
+    }
+  },
+  child: MyContent(),
+)
+```
+
+## Modals
+
+Location: `lib/ui/common/modals/`
+
+### FullscreenUrlImgViewer
+
+Image lightbox:
+
+```dart
+appLogic.showFullscreenDialogRoute(
+  context,
+  FullscreenUrlImgViewer(urls: [imageUrl]),
+);
+```
+
+### FullscreenVideoViewer
+
+YouTube video player:
+
+```dart
+appLogic.showFullscreenDialogRoute(
+  context,
+  FullscreenVideoViewer(id: youtubeId),
+);
+```
+
+### FullscreenMapsViewer
+
+Google Maps integration:
+
+```dart
+appLogic.showFullscreenDialogRoute(
+  context,
+  FullscreenMapsViewer(type: wonderType),
+);
+```
+
+### FullscreenWebView
+
+In-app browser:
+
+```dart
+appLogic.showFullscreenDialogRoute(
+  context,
+  FullscreenWebView(url: 'https://example.com'),
+);
+```
+
+## Utilities
+
+### Themed Text
+
+Location: `lib/ui/common/themed_text.dart`
+
+```dart
+LightText(
+  child: Text('Light colored text'),
+)
+
+DarkText(
+  child: Text('Dark colored text'),
+)
+```
+
+### Static Text Scale
+
+Location: `lib/ui/common/static_text_scale.dart`
+
+Prevent text from scaling with system settings:
+
+```dart
+StaticTextScale(
+  child: Text('Fixed size text'),
+)
+```
+
+### App Haptics
+
+Location: `lib/ui/common/utils/app_haptics.dart`
+
+```dart
+AppHaptics.lightImpact();
+AppHaptics.mediumImpact();
+AppHaptics.heavyImpact();
+```
+
+## Common Patterns
+
+### Responsive Layouts
+
+```dart
+Widget build(BuildContext context) {
+  bool useNavRail = appLogic.shouldUseNavRail();
+  return useNavRail ? _buildDesktopLayout() : _buildMobileLayout();
+}
+```
+
+### Conditional Animations
+
+```dart
+Widget build(BuildContext context) {
+  return MyWidget()
+    .maybeAnimate()
+    .fadeIn(duration: $styles.times.fast);
+}
+```
+
+### Semantic Labels
+
+All interactive widgets include semantic labels:
+
+```dart
+CircleIconBtn(
+  icon: AppIcons.menu,
+  onPressed: _openMenu,
+  semanticLabel: $strings.homeSemanticOpenMain,
+)
+```
+
+### Style Access
+
+```dart
+Container(
+  padding: EdgeInsets.all($styles.insets.md),
+  decoration: BoxDecoration(
+    color: $styles.colors.greyStrong,
+    borderRadius: BorderRadius.circular($styles.corners.md),
+  ),
+)
+```
+
+## Best Practices
+
+1. **Composition over Inheritance**: Build complex UI from simple, reusable widgets
+2. **Separate Concerns**: Keep business logic in logic classes, not widgets
+3. **Semantic HTML**: Always provide semantic labels for accessibility
+4. **Responsive Design**: Use `appLogic.shouldUseNavRail()` and context sizing
+5. **Performance**: Use `RepaintBoundary` for complex animations
+6. **Theming**: Access colors, sizes, and styles via `$styles`
+7. **Localization**: Use `$strings` for all user-facing text
+8. **Null Safety**: Handle null cases explicitly
+
+## Related Files
+
+- `lib/ui/common/controls/buttons.dart` - Button components
+- `lib/ui/common/controls/app_header.dart` - Header component
+- `lib/ui/common/controls/circle_buttons.dart` - Circular buttons
+- `lib/ui/wonder_illustrations/` - Wonder illustration system
+- `lib/ui/screens/` - All screen implementations
+- `lib/common_libs.dart` - Common imports
+- `lib/styles/styles.dart` - Theme and styling

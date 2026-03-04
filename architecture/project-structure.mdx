@@ -1,0 +1,375 @@
+---
+title: Project Structure
+description: Organization of files, folders, and code modules in the Wonderous Flutter app
+---
+
+The Wonderous app follows a structured, domain-driven organization that separates concerns and makes the codebase easy to navigate.
+
+## Root Directory Structure
+
+```
+wonderous/
+├── android/          # Android native project
+├── ios/              # iOS native project
+├── macos/            # macOS native project
+├── windows/          # Windows native project
+├── web/              # Web platform configuration
+├── assets/           # Static assets (images, fonts)
+├── lib/              # Main application code
+├── tools/            # Development tools and scripts
+├── py/               # Python utilities
+├── pubspec.yaml      # Flutter dependencies
+└── analysis_options.yaml
+```
+
+## Platform Folders
+
+### Mobile Platforms
+
+<Tabs>
+  <Tab title="Android">
+    Contains Android-specific configuration and native code:
+    - `android/app/src/main/`: Main application code
+    - `android/app/build.gradle`: Android build configuration
+    - Native splash screen resources
+    - App icons and launcher configuration
+  </Tab>
+  <Tab title="iOS">
+    Contains iOS-specific configuration:
+    - `ios/Runner/`: Main iOS project
+    - `ios/Runner.xcodeproj/`: Xcode project files
+    - Info.plist for app configuration
+    - Uses Impeller rendering by default
+  </Tab>
+</Tabs>
+
+### Desktop Platforms
+
+<Tabs>
+  <Tab title="macOS">
+    macOS application bundle structure:
+    - `macos/Runner/`: Main macOS project
+    - Window size and configuration
+    - macOS-specific entitlements
+  </Tab>
+  <Tab title="Windows">
+    Windows application structure:
+    - `windows/runner/`: Windows runner project
+    - CMake build configuration
+    - Windows-specific resources
+  </Tab>
+</Tabs>
+
+### Web Platform
+
+The `web/` folder contains:
+- `index.html`: Main HTML entry point
+- Favicon and web app icons
+- Web-specific assets
+- WASM build optimizations
+
+<Note>
+  The production web build uses WebAssembly (WASM) for improved performance. Build with `flutter build web --wasm`.
+</Note>
+
+## Assets Organization
+
+The `assets/` directory contains all static resources:
+
+```
+assets/
+├── fonts/                # Custom font families
+│   ├── Cinzel*.ttf       # Decorative headers
+│   ├── Raleway*.ttf      # Body text
+│   ├── Tenor*.ttf        # Alternative headers
+│   ├── MaShanZheng*.ttf  # Chinese localization
+│   └── B612Mono*.ttf     # Monospace font
+├── images/               # All image assets
+│   ├── _common/          # Shared UI elements
+│   │   ├── icons/        # Navigation and UI icons
+│   │   └── texture/      # Background textures
+│   ├── chichen_itza/     # Wonder-specific images
+│   ├── christ_the_redeemer/
+│   ├── colosseum/
+│   ├── great_wall_of_china/
+│   ├── machu_picchu/
+│   ├── petra/
+│   ├── pyramids/
+│   ├── taj_mahal/
+│   ├── collectibles/     # Collectible item images
+│   └── widget/           # Home widget graphics
+└── marketing/            # App store assets
+    └── app-icon-*.png    # Various icon sizes
+```
+
+### Font Configuration
+
+Fonts are defined in `pubspec.yaml:103-132` with multiple weights and styles:
+
+- **Cinzel**: Decorative display font for headers
+- **Raleway**: Primary body font with italic, medium, bold, and extra-bold weights
+- **Tenor Sans**: Alternative sans-serif for headers
+- **Yeseva One**: Decorative titles
+- **MaShanZheng**: Chinese character support
+- **B612 Mono**: Monospace font for technical content
+
+## Lib Directory Structure
+
+The `lib/` folder contains all Dart source code, organized by function:
+
+```
+lib/
+├── main.dart             # App entry point
+├── router.dart           # Route definitions
+├── common_libs.dart      # Common imports
+├── assets.dart           # Asset path constants
+├── _tools/               # Development utilities
+├── l10n/                 # Localization (i18n)
+├── logic/                # Business logic layer
+├── styles/               # Theme and styling
+└── ui/                   # User interface layer
+```
+
+### Entry Points
+
+<CodeGroup>
+```dart main.dart
+// Application entry point
+void main() async {
+  // Initialize Flutter bindings
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Register dependency injection
+  registerSingletons();
+  
+  // Launch app
+  runApp(WondersApp());
+  
+  // Bootstrap logic
+  await appLogic.bootstrap();
+}
+```
+
+```dart common_libs.dart
+// Consolidated common imports across the app
+library;
+
+export 'dart:math';
+export 'package:flutter/material.dart';
+export 'package:get_it/get_it.dart';
+export 'package:get_it_mixin/get_it_mixin.dart';
+export 'package:go_router/go_router.dart';
+export 'package:provider/provider.dart';
+// ... more common exports
+```
+</CodeGroup>
+
+## Logic Layer Organization
+
+The `lib/logic/` directory contains all business logic:
+
+```
+logic/
+├── app_logic.dart            # Main app controller
+├── wonders_logic.dart        # Wonder data management
+├── settings_logic.dart       # User settings
+├── collectibles_logic.dart   # Collectibles system
+├── timeline_logic.dart       # Timeline events
+├── artifact_api_logic.dart   # Artifact search
+├── artifact_api_service.dart # API service
+├── unsplash_logic.dart       # Photo integration
+├── locale_logic.dart         # Localization
+├── native_widget_service.dart # Home widgets
+├── common/                   # Shared utilities
+│   ├── platform_info.dart    # Platform detection
+│   ├── save_load_mixin.dart  # Persistence mixin
+│   ├── http_client.dart      # HTTP utilities
+│   ├── throttler.dart        # Rate limiting
+│   ├── debouncer.dart        # Input debouncing
+│   └── ... (more utilities)
+└── data/                     # Data models
+    ├── wonder_data.dart      # Wonder model
+    ├── wonder_type.dart      # Wonder enum
+    ├── collectible_data.dart # Collectible model
+    ├── artifact_data.dart    # Artifact model
+    ├── timeline_data.dart    # Timeline model
+    └── wonders_data/         # Wonder-specific data
+        ├── chichen_itza_data.dart
+        ├── petra_data.dart
+        ├── ... (one per wonder)
+        └── search/           # Search data
+```
+
+### Logic Classes Pattern
+
+All logic controllers follow a consistent pattern:
+
+1. **Singleton Registration**: Registered in `main.dart:79-99` via GetIt
+2. **Lazy Initialization**: Services created on first access
+3. **Global Accessors**: Convenient getters like `appLogic`, `wondersLogic`
+4. **State Management**: Expose `ValueNotifier` properties for reactive updates
+
+<Tip>
+  Services (like `ArtifactAPIService`) are deliberately not given global accessors to discourage direct use in the UI layer. Always access services through logic controllers.
+</Tip>
+
+## UI Layer Organization
+
+The `lib/ui/` directory contains all visual components:
+
+```
+ui/
+├── app_scaffold.dart         # Root scaffold & theme
+├── common/                   # Shared UI components
+│   ├── controls/             # Reusable controls
+│   │   ├── app_image.dart    # Custom image widget
+│   │   ├── buttons.dart      # Button components
+│   │   ├── circle_buttons.dart
+│   │   └── scroll_decorator.dart
+│   ├── modals/               # Modal dialogs
+│   │   ├── fullscreen_video_viewer.dart
+│   │   └── fullscreen_maps_viewer.dart
+│   └── utils/                # UI utilities
+│       ├── page_routes.dart  # Route transitions
+│       └── ...
+├── screens/                  # Feature screens
+│   ├── home/                 # Home screen
+│   ├── intro/                # Onboarding
+│   ├── wonder_details/       # Wonder detail view
+│   ├── timeline/             # Timeline screen
+│   ├── artifact/             # Artifact features
+│   │   ├── artifact_search/
+│   │   ├── artifact_details/
+│   │   └── artifact_carousel/
+│   ├── collection/           # Collections screen
+│   ├── photo_gallery/        # Photo viewer
+│   ├── collectible_found/    # Collectible discovery
+│   ├── home_menu/            # Menu screen
+│   └── page_not_found/       # 404 page
+└── wonder_illustrations/     # Custom illustrations
+    └── common/               # Shared illustration code
+```
+
+### Screen Organization Pattern
+
+Each feature screen follows this structure:
+
+```
+screens/feature_name/
+├── feature_name_screen.dart  # Main screen widget
+└── widgets/                  # Feature-specific widgets
+    ├── widget_one.dart
+    └── widget_two.dart
+```
+
+## Styles Organization
+
+The `lib/styles/` directory provides centralized styling:
+
+```
+styles/
+├── styles.dart                      # AppStyle definition
+├── colors.dart                      # Color palette
+└── wonders_color_extensions.dart    # Color utilities
+```
+
+Styles are accessed globally via the `$styles` getter:
+
+```dart
+// Access colors
+$styles.colors.black
+$styles.colors.accent1
+
+// Access text styles
+$styles.text.h1
+$styles.text.body
+
+// Access sizes
+$styles.sizes.minAppSize
+
+// Access timing
+$styles.times.fast
+$styles.times.pageTransition
+```
+
+## Localization (l10n)
+
+The `lib/l10n/` directory handles internationalization:
+
+```
+l10n/
+├── app_localizations.dart       # Base localization class
+├── app_localizations_en.dart    # English strings
+└── app_localizations_zh.dart    # Chinese strings
+```
+
+Localized strings are accessed via `$strings` global getter:
+
+```dart
+$strings.homeMenuButtonExplore
+$strings.wonderDetailsTabLabelConstruction
+```
+
+## Development Tools
+
+### Tools Directory
+
+The `tools/` folder contains development utilities for building and deployment.
+
+### Internal Tools
+
+The `lib/_tools/` directory contains development helpers:
+
+```
+_tools/
+├── artifact_download_helper.dart  # Download artifacts
+├── artifact_search_helper.dart    # Test artifact search
+└── unsplash_download_service.dart # Download photos
+```
+
+<Warning>
+  The `_tools/` directory is prefixed with underscore to indicate internal use. These utilities are not part of the production app.
+</Warning>
+
+## File Naming Conventions
+
+### Dart Files
+
+- **snake_case**: All Dart files use snake_case (e.g., `wonder_details_screen.dart`)
+- **Suffixes**: Files are suffixed by type:
+  - `*_screen.dart` for screen widgets
+  - `*_logic.dart` for logic controllers
+  - `*_service.dart` for service classes
+  - `*_data.dart` for data models
+  - `*_mixin.dart` for mixins
+
+### Asset Files
+
+- Images: Kebab-case (e.g., `taj-mahal.png`, `foreground-left.png`)
+- Fonts: PascalCase with weight suffix (e.g., `Raleway-Bold.ttf`)
+
+## Configuration Files
+
+### pubspec.yaml
+
+Defines dependencies, assets, and fonts. Key sections:
+
+- `dependencies`: Production packages
+- `dev_dependencies`: Development tools
+- `flutter.assets`: Asset directory declarations
+- `flutter.fonts`: Font family definitions
+
+### analysis_options.yaml
+
+Lint rules and static analysis configuration using `flutter_lints:6.0.0`.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture Overview" icon="building" href="/architecture/overview">
+    Return to high-level architecture concepts
+  </Card>
+  <Card title="State Management" icon="diagram-project" href="/architecture/state-management">
+    Learn about GetIt, Provider, and reactive state
+  </Card>
+</CardGroup>

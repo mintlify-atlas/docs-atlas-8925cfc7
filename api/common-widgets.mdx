@@ -1,0 +1,553 @@
+---
+title: "Common Widgets"
+description: "Reusable UI components and utilities in the Wonderous app"
+---
+
+## Overview
+
+The common widgets library (`lib/ui/common/`) provides reusable components used throughout the Wonderous app. These include controls, layout utilities, visual effects, and helper widgets.
+
+## Controls
+
+### AppBtn
+
+**Location:** `lib/ui/common/controls/buttons.dart`
+
+The core button component with multiple variants and customization options.
+
+**Basic Usage:**
+```dart
+AppBtn(
+  onPressed: () => print('Pressed'),
+  semanticLabel: 'Submit Button',
+  child: Text('Submit'),
+)
+```
+
+**Named Constructors:**
+
+**AppBtn.from** - Create button with text and/or icon:
+```dart
+AppBtn.from(
+  text: 'Continue',
+  icon: AppIcons.next,
+  iconSize: 18,
+  onPressed: () {},
+)
+```
+
+**AppBtn.basic** - Minimal button with no background:
+```dart
+AppBtn.basic(
+  onPressed: () {},
+  semanticLabel: 'Close',
+  child: Icon(Icons.close),
+)
+```
+
+**Properties:**
+- `onPressed` - Callback function (VoidCallback?)
+- `semanticLabel` - Accessibility label (required)
+- `child` - Button content widget
+- `padding` - Internal padding (EdgeInsets?)
+- `expand` - Fill available width (bool)
+- `isSecondary` - Use secondary color scheme (bool)
+- `circular` - Circular shape (bool)
+- `minimumSize` - Minimum button dimensions (Size?)
+- `bgColor` - Background color (Color?)
+- `border` - Border style (BorderSide?)
+- `pressEffect` - Enable press animation (bool)
+- `hoverEffect` - Enable hover effect (bool)
+- `enableFeedback` - Haptic feedback (bool)
+- `focusNode` - Focus management (FocusNode?)
+
+**Effects:**
+- Press effect: 0.7 opacity on tap
+- Hover effect: White overlay with 30 alpha (web only)
+- Focus indicator: Accent color border when focused
+
+---
+
+### CircleBtn / CircleIconBtn
+
+**Location:** `lib/ui/common/controls/circle_buttons.dart`
+
+Circular buttons for icons and actions.
+
+**CircleIconBtn:**
+```dart
+CircleIconBtn(
+  icon: AppIcons.share,
+  onPressed: () {},
+  semanticLabel: 'Share',
+  size: 48,           // Default: 28
+  iconSize: 24,       // Default: 28
+  bgColor: Colors.black,
+  color: Colors.white,
+  flipIcon: false,
+)
+```
+
+**BackBtn:**
+Specialized back navigation button:
+```dart
+BackBtn(
+  icon: AppIcons.prev,
+  onPressed: () => context.pop(),
+  semanticLabel: 'Go Back',
+)
+
+// Close variant
+BackBtn.close(
+  onPressed: () => context.pop(),
+)
+```
+
+**Features:**
+- Automatic navigation handling if onPressed is null
+- ESC key support for closing
+- Safe area padding with `.safe()` method
+
+---
+
+### AppHeader
+
+**Location:** `lib/ui/common/controls/app_header.dart`
+
+Standard app header with title, subtitle, and back button.
+
+**Usage:**
+```dart
+AppHeader(
+  title: 'Timeline',
+  subtitle: 'Great Wall',
+  showBackBtn: true,
+  isTransparent: false,
+  onBack: () => context.pop(),
+  backIcon: AppIcons.prev,
+  backBtnSemantics: 'Navigate Back',
+  trailing: (context) => IconButton(...),
+)
+```
+
+**Properties:**
+- `title` - Main title text (String?)
+- `subtitle` - Secondary text below title (String?)
+- `showBackBtn` - Display back button (bool)
+- `isTransparent` - Transparent background (bool)
+- `onBack` - Custom back action (VoidCallback?)
+- `backIcon` - Custom back icon (AppIcons)
+- `backBtnSemantics` - Back button accessibility label (String?)
+- `trailing` - Widget on right side (WidgetBuilder?)
+
+**Layout:**
+- Fixed height: 64px (scaled)
+- Safe area at top
+- Title/subtitle centered
+- Back button on left, trailing on right
+
+---
+
+### AppPageIndicator
+
+**Location:** `lib/ui/common/controls/app_page_indicator.dart`
+
+Page indicator dots for PageView navigation.
+
+**Usage:**
+```dart
+AppPageIndicator(
+  count: 8,
+  controller: _pageController,
+  onDotPressed: (index) => _jumpToPage(index),
+  color: Colors.white,
+  dotSize: 8,
+  semanticPageTitle: 'Wonder',
+)
+```
+
+**Properties:**
+- `count` - Number of pages (int)
+- `controller` - PageController to track (required)
+- `onDotPressed` - Callback when dot tapped (Function(int)?)
+- `color` - Dot color (Color?)
+- `dotSize` - Dot diameter in pixels (double?)
+- `semanticPageTitle` - Accessibility page title (String)
+
+**Features:**
+- Expanding dots effect (2x expansion)
+- Live region announcements for screen readers
+- Auto-updates based on PageController
+
+---
+
+### Other Controls
+
+**AppImage** - Enhanced image widget with loading states
+**AppLoadingIndicator** - Consistent loading spinner
+**Checkbox** - Custom styled checkbox
+**DiagonalTextPageIndicator** - Alternative page indicator
+**EightWaySwipeDetector** - Multi-directional swipe detection
+**LocaleSwitcher** - Language selection control
+**ScrollDecorator** - Styled scrollbars
+**TrackpadListener** - Trackpad/mouse scroll detection
+
+---
+
+## Layout Widgets
+
+### CenteredBox
+
+**Location:** `lib/ui/common/centered_box.dart`
+
+Centers content with optional size constraints.
+
+**Usage:**
+```dart
+CenteredBox(
+  width: 600,
+  height: 400,
+  padding: EdgeInsets.all(16),
+  child: MyContent(),
+)
+```
+
+---
+
+### GradientContainer
+
+**Location:** `lib/ui/common/gradient_container.dart`
+
+Container with linear gradient background.
+
+**Base Class:**
+```dart
+GradientContainer(
+  [Colors.blue, Colors.purple],  // colors
+  [0.0, 1.0],                     // stops
+  child: MyWidget(),
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  blendMode: BlendMode.multiply,
+  borderRadius: BorderRadius.circular(12),
+)
+```
+
+**Specialized Gradients:**
+
+**HzGradient** - Horizontal (left to right):
+```dart
+HzGradient(
+  [Colors.black, Colors.transparent],
+  [0.0, 1.0],
+  width: 200,
+  height: 100,
+)
+```
+
+**VtGradient** - Vertical (top to bottom):
+```dart
+VtGradient(
+  [Colors.white.withAlpha(0), Colors.white],
+  [0.3, 1.0],
+  height: 300,
+)
+```
+
+---
+
+### LazyIndexedStack
+
+**Location:** `lib/ui/common/lazy_indexed_stack.dart`
+
+IndexedStack that only builds children when first shown.
+
+**Usage:**
+```dart
+LazyIndexedStack(
+  index: _currentIndex,
+  children: [
+    ExpensiveWidget1(),
+    ExpensiveWidget2(),
+    ExpensiveWidget3(),
+  ],
+)
+```
+
+**Benefits:**
+- Lazy initialization of tab content
+- Maintains state of previously shown children
+- Better performance than always building all children
+
+---
+
+## Visual Effects
+
+### BlendMask
+
+**Location:** `lib/ui/common/blend_mask.dart`
+
+Applies blend modes to child widget using render objects.
+
+**Usage:**
+```dart
+BlendMask(
+  blendModes: [BlendMode.multiply, BlendMode.overlay],
+  opacity: 0.8,
+  child: Image.asset('texture.png'),
+)
+```
+
+**Properties:**
+- `blendModes` - List of blend modes to apply (`List<BlendMode>`)
+- `opacity` - Overall opacity (double)
+- `child` - Widget to apply effects to (required)
+
+---
+
+### FadeColorTransition
+
+**Location:** `lib/ui/common/fade_color_transition.dart`
+
+Animated color transition for backgrounds.
+
+**Usage:**
+```dart
+FadeColorTransition(
+  color: Colors.blue,
+  animation: _animationController,
+)
+```
+
+---
+
+### CompassDivider
+
+**Location:** `lib/ui/common/compass_divider.dart`
+
+Decorative divider with compass rose styling.
+
+---
+
+### DashedLine
+
+**Location:** `lib/ui/common/dashed_line.dart`
+
+Customizable dashed line widget.
+
+**Usage:**
+```dart
+DashedLine(
+  color: Colors.grey,
+  thickness: 2,
+  dashLength: 8,
+  gapLength: 4,
+  isHorizontal: true,
+)
+```
+
+---
+
+## Modals
+
+### Modal System
+
+**Location:** `lib/ui/common/modals/app_modals.dart`
+
+**Show Modal:**
+```dart
+final result = await showModal(
+  context,
+  child: OkCancelModal(msg: 'Are you sure?'),
+);
+```
+
+**OkModal** - Single OK button:
+```dart
+OkModal(
+  title: 'Success',
+  msg: 'Operation completed',
+  child: CustomContent(),
+)
+```
+
+**OkCancelModal** - OK and Cancel buttons:
+```dart
+OkCancelModal(
+  title: 'Confirm',
+  msg: 'Delete this item?',
+)
+// Returns true if OK pressed, false if Cancel
+```
+
+**LoadingModal** - No buttons, for loading states:
+```dart
+LoadingModal(
+  msg: 'Please wait...',
+  child: CircularProgressIndicator(),
+)
+```
+
+---
+
+## Utilities
+
+### IgnorePointerAndSemantics
+
+**Location:** `lib/ui/common/ignore_pointer.dart`
+
+Combines IgnorePointer and ExcludeSemantics.
+
+**Usage:**
+```dart
+IgnorePointerAndSemantics(
+  child: DecorativeElement(),
+)
+```
+
+---
+
+### MeasurableWidget
+
+**Location:** `lib/ui/common/measurable_widget.dart`
+
+Reports widget size changes via callback.
+
+**Usage:**
+```dart
+MeasurableWidget(
+  onChange: (size) => print('Size: $size'),
+  child: MyWidget(),
+)
+```
+
+---
+
+### StaticTextScale
+
+**Location:** `lib/ui/common/static_text_scale.dart`
+
+Locks text scale factor to prevent user scaling.
+
+---
+
+### ThemedText
+
+**Location:** `lib/ui/common/themed_text.dart`
+
+Text widgets with consistent theming:
+
+```dart
+LightText(child: Text('Light text'))
+DarkText(child: Text('Dark text'))
+```
+
+---
+
+## Collectibles
+
+### CollectibleItem
+
+**Location:** `lib/ui/common/collectible_item.dart`
+
+Displays a collectible with state (locked/discovered/explored).
+
+### HiddenCollectible
+
+**Location:** `lib/ui/common/hidden_collectible.dart`
+
+Tappable hidden collectible scattered throughout the app.
+
+---
+
+## Input Handling
+
+### FullscreenKeyboardListener
+
+**Location:** `lib/ui/common/fullscreen_keyboard_listener.dart`
+
+Global keyboard event handling.
+
+**Usage:**
+```dart
+FullscreenKeyboardListener(
+  onKeyDown: (event) {
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      // Handle ESC key
+      return true;  // Event consumed
+    }
+    return false;  // Event not handled
+  },
+  child: MyScreen(),
+)
+```
+
+### KeyboardArrowsListener
+
+**Location:** `lib/ui/common/keyboard_arrows_listener.dart`
+
+Arrow key navigation support.
+
+---
+
+## App-Specific Widgets
+
+### AppIcons
+
+**Location:** `lib/ui/common/app_icons.dart`
+
+Enum and widgets for app icon set.
+
+**Usage:**
+```dart
+AppIcon(AppIcons.prev, size: 24, color: Colors.white)
+```
+
+### AppBackdrop
+
+**Location:** `lib/ui/common/app_backdrop.dart`
+
+Consistent backdrop filter effects.
+
+### AppScrollBehavior
+
+**Location:** `lib/ui/common/app_scroll_behavior.dart`
+
+Custom scroll physics and behavior.
+
+### AppShortcuts
+
+**Location:** `lib/ui/common/app_shortcuts.dart`
+
+Keyboard shortcuts configuration.
+
+---
+
+## Best Practices
+
+### Button Usage
+- Always provide `semanticLabel` for accessibility
+- Use `AppBtn.from` for common text+icon buttons
+- Use `AppBtn.basic` for transparent/minimal buttons
+- Enable `pressEffect` and `hoverEffect` for better UX
+
+### Layout
+- Use `CenteredBox` for max-width content containers
+- Use `LazyIndexedStack` for tab views
+- Apply `RepaintBoundary` to animated sections
+
+### Accessibility
+- Wrap decorative elements in `IgnorePointerAndSemantics`
+- Use semantic labels on all interactive widgets
+- Test with screen readers (TalkBack/VoiceOver)
+
+### Performance
+- Use `const` constructors where possible
+- Apply `RepaintBoundary` to frequently repainted widgets
+- Lazy load expensive content
+
+## Related
+
+- [Screens](/api/screens) - Main application screens
+- [Wonder Illustrations](/api/wonder-illustrations) - Illustration components
+- [Theming](/customization/theming) - Theme and design tokens

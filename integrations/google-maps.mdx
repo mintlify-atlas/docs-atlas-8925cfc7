@@ -1,0 +1,187 @@
+---
+title: 'Google Maps Integration'
+description: 'Learn how Wonderous uses Google Maps to display wonder locations with interactive maps'
+---
+
+## Overview
+
+Wonderous integrates Google Maps to provide interactive map views showing the exact locations of the Seven Wonders. Users can view each wonder's location with satellite imagery and a custom marker.
+
+## Packages Used
+
+```yaml pubspec.yaml
+google_maps_flutter: ^2.2.8
+google_maps_flutter_web: ^0.6.1
+```
+
+The integration uses the official Google Maps Flutter plugin with web support for cross-platform compatibility.
+
+## FullscreenMapsViewer
+
+The main component for displaying maps is the `FullscreenMapsViewer` widget, which provides a fullscreen map view centered on a specific wonder.
+
+```dart lib/ui/common/modals/fullscreen_maps_viewer.dart
+class FullscreenMapsViewer extends StatelessWidget {
+  FullscreenMapsViewer({super.key, required this.type});
+  final WonderType type;
+
+  WonderData get data => wondersLogic.getData(type);
+  late final startPos = CameraPosition(
+    target: LatLng(data.lat, data.lng), 
+    zoom: 17
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        SafeArea(
+          top: false,
+          child: GoogleMap(
+            mapType: MapType.hybrid,
+            markers: {getMapsMarker(startPos.target)},
+            initialCameraPosition: startPos,
+            myLocationButtonEnabled: false,
+          ),
+        ),
+        AppHeader(isTransparent: true),
+      ],
+    );
+  }
+}
+```
+
+### Key Features
+
+**Wonder-specific positioning**: The map automatically centers on the wonder's coordinates using `WonderData.lat` and `WonderData.lng`
+
+**Hybrid map type**: Uses `MapType.hybrid` to show satellite imagery with road labels for better context
+
+**Fixed zoom level**: Set to zoom level 17 for optimal detail and context
+
+**Custom marker**: Displays a custom app-branded marker at the wonder location
+
+**Transparent header**: Overlays the app header on top of the map
+
+## Custom Map Marker
+
+The app uses a custom marker instead of the default Google Maps pin:
+
+```dart lib/ui/common/google_maps_marker.dart
+Marker getMapsMarker(LatLng position) => Marker(
+  markerId: MarkerId('0'),
+  position: position,
+  icon: AppBitmaps.mapMarker,
+);
+```
+
+The custom marker provides:
+- Consistent branding with the app's visual identity
+- Better visibility on satellite imagery
+- Custom icon from `AppBitmaps.mapMarker`
+
+## Implementation Details
+
+### Camera Position
+
+The camera position is calculated based on wonder data:
+
+```dart
+late final startPos = CameraPosition(
+  target: LatLng(data.lat, data.lng), 
+  zoom: 17
+);
+```
+
+- **Target**: Uses latitude and longitude from `WonderData`
+- **Zoom**: Level 17 provides street-level detail while showing surrounding area
+
+### Map Configuration
+
+```dart
+GoogleMap(
+  mapType: MapType.hybrid,
+  markers: {getMapsMarker(startPos.target)},
+  initialCameraPosition: startPos,
+  myLocationButtonEnabled: false,
+)
+```
+
+**Configuration options:**
+- `mapType: MapType.hybrid` - Shows satellite imagery with labels
+- `markers` - Single custom marker at wonder location
+- `initialCameraPosition` - Starting position and zoom
+- `myLocationButtonEnabled: false` - Disables location button for cleaner UI
+
+## Usage in App Flow
+
+The map viewer is typically shown as a modal or fullscreen overlay when users want to explore a wonder's location:
+
+1. User selects a wonder to view
+2. User taps a "View on Map" action
+3. `FullscreenMapsViewer` is pushed with the wonder's `WonderType`
+4. Map loads centered on the wonder with satellite view
+5. User can pan, zoom, and explore the area
+6. AppHeader provides navigation back to previous screen
+
+## Platform Support
+
+<Info>
+The integration works across platforms:
+- **Mobile**: Uses native Google Maps SDK
+- **Web**: Uses `google_maps_flutter_web` for browser support
+- **Desktop**: Embedded web view with Google Maps JavaScript API
+</Info>
+
+## API Key Configuration
+
+Google Maps requires platform-specific API keys:
+
+### Android
+```xml android/app/src/main/AndroidManifest.xml
+<meta-data
+  android:name="com.google.android.geo.API_KEY"
+  android:value="YOUR_API_KEY"/>
+```
+
+### iOS
+```xml ios/Runner/AppDelegate.swift
+GMSServices.provideAPIKey("YOUR_API_KEY")
+```
+
+### Web
+```html web/index.html
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+```
+
+<Warning>
+API keys should be stored securely and restricted to your app's bundle identifier and domains to prevent unauthorized usage.
+</Warning>
+
+## Wonder Location Data
+
+Each wonder's location is stored in `WonderData`:
+
+```dart
+class WonderData {
+  final double lat;  // Latitude coordinate
+  final double lng;  // Longitude coordinate
+  // ... other wonder properties
+}
+```
+
+The coordinates are precise to ensure the map centers exactly on each monument:
+
+- Great Wall of China
+- Petra
+- Colosseum
+- Chichen Itza
+- Machu Picchu
+- Taj Mahal
+- Christ the Redeemer
+
+## Related Files
+
+- `lib/ui/common/modals/fullscreen_maps_viewer.dart` - Main map viewer widget
+- `lib/ui/common/google_maps_marker.dart` - Custom marker implementation
+- `lib/logic/data/wonder_data.dart` - Wonder location data

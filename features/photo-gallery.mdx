@@ -1,0 +1,401 @@
+---
+title: Photo Gallery
+description: Swipeable grid-based photo gallery powered by Unsplash collections
+---
+
+The Photo Gallery feature displays curated photo collections from Unsplash for each wonder, presented in an innovative grid-based navigation interface.
+
+## Unsplash Integration
+
+Each wonder has a dedicated Unsplash collection ID:
+
+```dart lib/logic/data/wonder_data.dart
+class WonderData {
+  final String unsplashCollectionId;  // e.g., 'Kg_h04xvZEo' for Great Wall
+  // ...
+}
+```
+
+### Photo Collections
+
+Photo IDs are pre-fetched and stored locally:
+
+```dart lib/logic/data/unsplash_photo_data.dart
+class UnsplashPhotoData {
+  final String id;
+  final String url;
+
+  static final photosByCollectionId = {
+    'Kg_h04xvZEo': [  // Great Wall collection
+      'eq4OpDuGN7w',
+      'cSKa2PDcU-Q',
+      'MLfwSItwSpg',
+      // ... ~24 photos per collection
+    ],
+    'wUhgZTyUnl8': [  // Petra collection
+      'UiUtIG0xLPM',
+      'qytSCIVTTc4',
+      // ...
+    ],
+    // ... 8 collections total (one per wonder)
+  };
+}
+```
+
+## Unsplash Service
+
+The service handles photo loading (used primarily for development):
+
+```dart lib/logic/unsplash_service.dart
+class UnsplashService {
+  final client = UnsplashClient(
+    settings: ClientSettings(
+      credentials: AppCredentials(
+        accessKey: unsplashAccessKey,
+        secretKey: unsplashSecretKey,
+      ),
+    ),
+  );
+
+  Future<List<String>?> loadCollectionPhotos(String id) async {
+    final photo = await client.collections.photos(id, page: 1, perPage: 25).go();
+    final data = photo.data;
+    if (data == null) return null;
+    return data.map((e) => e.id).toList();
+  }
+
+  Future<UnsplashPhotoData?> loadInfo(String id) async {
+    final photo = await client.photos.get(id).go();
+    final data = photo.data;
+    if (data == null) throw 'Photo did not load';
+    return UnsplashPhotoData(id: id, url: '${data.urls.raw}');
+  }
+}
+```
+
+## Unsplash Logic
+
+The logic layer provides access to photo collections:
+
+```dart lib/logic/unsplash_logic.dart
+class UnsplashLogic {
+  final Map<String, List<String>> _idsByCollection = 
+    UnsplashPhotoData.photosByCollectionId;
+
+  UnsplashService get service => GetIt.I.get<UnsplashService>();
+
+  List<String>? getCollectionPhotos(String collectionId) => 
+    _idsByCollection[collectionId];
+}
+```
+
+## Photo Gallery UI
+
+The gallery displays photos in a 5×5 grid with unique navigation:
+
+```dart lib/ui/screens/photo_gallery/photo_gallery.dart
+class PhotoGallery extends StatefulWidget {
+  final Size? imageSize;
+  final String collectionId;
+  final WonderType wonderType;
+
+  @override
+  State<PhotoGallery> createState() => _PhotoGalleryState();
+}
+
+class _PhotoGalleryState extends State<PhotoGallery> {
+  static const int _gridSize = 5;
+  
+  // Index starts in middle of grid (e.g., 25 items, index starts at 13)
+  int _index = ((_gridSize * _gridSize) / 2).round();
+  
+  int get _imgCount => pow(_gridSize, 2).round();  // 25 images
+  
+  @override
+  void initState() {
+    super.initState();
+    _initPhotoIds();
+  }
+
+  Future<void> _initPhotoIds() async {
+    var ids = unsplashLogic.getCollectionPhotos(widget.collectionId);
+    if (ids != null && ids.isNotEmpty) {
+      // Ensure we have enough images to fill the grid
+      while (ids.length < _imgCount) {
+        ids.addAll(List.from(ids));  // Repeat if necessary
+        if (ids.length > _imgCount) ids.length = _imgCount;
+      }
+    }
+    setState(() => _photoIds.value = ids ?? []);
+  }
+}
+```
+
+## Grid Navigation
+
+Unique grid-based navigation allows 4-directional movement:
+
+### Swipe Gestures
+
+```dart
+void _handleSwipe(Offset dir) {
+  int newIndex = _index;
+  
+  // Vertical swipes move by entire row (5 items)
+  if (dir.dy != 0) newIndex += _gridSize * (dir.dy > 0 ? -1 : 1);
+  
+  // Horizontal swipes move one item at a time
+  if (dir.dx != 0) newIndex += (dir.dx > 0 ? -1 : 1);
+  
+  // Validate boundaries
+  if (newIndex < 0 || newIndex > _imgCount - 1) return;
+  
+  // Prevent wrapping at edges
+  if (dir.dx < 0 && newIndex % _gridSize == 0) return;  // Right edge
+  if (dir.dx > 0 && newIndex % _gridSize == _gridSize - 1) return;  // Left edge
+  
+  _lastSwipeDir = dir;
+  AppHaptics.lightImpact();
+  _setIndex(newIndex);
+}
+```
+
+### Keyboard Navigation
+
+```dart
+bool _handleKeyDown(KeyDownEvent event) {
+  final key = event.logicalKey;
+  Map<LogicalKeyboardKey, int> keyActions = {
+    LogicalKeyboardKey.arrowUp: -_gridSize,      // Move up one row
+    LogicalKeyboardKey.arrowDown: _gridSize,     // Move down one row
+    LogicalKeyboardKey.arrowRight: 1,            // Move right one item
+    LogicalKeyboardKey.arrowLeft: -1,            // Move left one item
+  };
+
+  int? actionValue = keyActions[key];
+  if (actionValue == null) return false;
+  int newIndex = _index + actionValue;
+
+  // Block actions along edges
+  bool isRightSide = _index % _gridSize == _gridSize - 1;
+  bool isLeftSide = _index % _gridSize == 0;
+  bool outOfBounds = newIndex < 0 || newIndex >= _imgCount;
+  
+  if ((isRightSide && key == LogicalKeyboardKey.arrowRight) ||
+      (isLeftSide && key == LogicalKeyboardKey.arrowLeft) ||
+      outOfBounds) {
+    return false;
+  }
+  
+  _setIndex(newIndex);
+  return true;
+}
+```
+
+## Grid Positioning
+
+The grid is offset to keep the selected image centered:
+
+```dart
+Offset _calculateCurrentOffset(double padding, Size size) {
+  double halfCount = (_gridSize / 2).floorToDouble();
+  Size paddedImageSize = Size(size.width + padding, size.height + padding);
+  
+  // Get starting offset for top-left image (index 0)
+  final originOffset = Offset(
+    halfCount * paddedImageSize.width,
+    halfCount * paddedImageSize.height,
+  );
+  
+  // Calculate offset for current row/col
+  int col = _index % _gridSize;
+  int row = (_index / _gridSize).floor();
+  final indexedOffset = Offset(
+    -paddedImageSize.width * col,
+    -paddedImageSize.height * row,
+  );
+  
+  return originOffset + indexedOffset;
+}
+```
+
+## Image Display
+
+Images are rendered with responsive sizing:
+
+```dart
+Widget _buildImage(int index, Duration swipeDuration, Size imgSize) {
+  bool isSelected = index == _index;
+  final imgUrl = _photoIds.value[index];
+  
+  final photoWidget = TweenAnimationBuilder<double>(
+    duration: $styles.times.med,
+    curve: Curves.easeOut,
+    tween: Tween(begin: 1, end: isSelected ? 1.15 : 1),
+    builder: (_, value, child) => Transform.scale(scale: value, child: child),
+    child: UnsplashPhoto(
+      imgUrl,
+      fit: BoxFit.cover,
+      size: UnsplashPhotoSize.large,
+    ).maybeAnimate().fade(),
+  );
+  
+  return AppBtn.basic(
+    onPressed: () => _handleImageTapped(index, isSelected),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        width: imgSize.width,
+        height: imgSize.height,
+        child: photoWidget,
+      ),
+    ),
+  );
+}
+```
+
+### Image Scaling
+
+Selected image scales up 15% for emphasis:
+
+```dart
+TweenAnimationBuilder<double>(
+  tween: Tween(begin: 1, end: isSelected ? 1.15 : 1),
+  builder: (_, value, child) => Transform.scale(scale: value, child: child),
+  child: photoWidget,
+)
+```
+
+## Animated Cutout Overlay
+
+A dynamic overlay highlights the selected image:
+
+```dart
+class _AnimatedCutoutOverlay extends StatelessWidget {
+  final Widget child;
+  final Size cutoutSize;
+  final Offset swipeDir;
+  final Duration duration;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        // Dark overlay with cutout hole
+        CustomPaint(
+          painter: CutoutPainter(
+            cutoutSize: cutoutSize,
+            opacity: opacity,
+          ),
+          child: Container(),
+        ),
+      ],
+    );
+  }
+}
+```
+
+Creates a vignette effect focusing attention on the selected photo.
+
+## Fullscreen Viewer
+
+Tapping the selected image opens fullscreen mode:
+
+```dart
+Future<void> _handleImageTapped(int index, bool isSelected) async {
+  if (_index == index) {
+    // Build list of full-size image URLs
+    final urls = _photoIds.value.map((e) {
+      return UnsplashPhotoData.getSelfHostedUrl(e, UnsplashPhotoSize.xl);
+    }).toList();
+    
+    // Show fullscreen viewer
+    int? newIndex = await appLogic.showFullscreenDialogRoute(
+      context,
+      FullscreenUrlImgViewer(urls: urls, index: _index),
+    );
+
+    if (newIndex != null) {
+      _setIndex(newIndex, skipAnimation: true);
+    }
+  } else {
+    _setIndex(index);
+  }
+}
+```
+
+**Fullscreen Features:**
+- Swipe between photos
+- Pinch to zoom
+- Double-tap to zoom
+- Share button
+- Download option
+- Exit returns to previous grid position
+
+## Hidden Collectibles
+
+One grid position contains a hidden collectible:
+
+```dart
+int _getCollectibleIndex() {
+  return switch (widget.wonderType) {
+    WonderType.chichenItza || WonderType.petra => 0,  // Top-left
+    WonderType.colosseum || WonderType.pyramidsGiza => _gridSize - 1,  // Top-right
+    WonderType.christRedeemer || WonderType.machuPicchu => _imgCount - 1,  // Bottom-right
+    WonderType.greatWall || WonderType.tajMahal => _imgCount - _gridSize,  // Bottom-left
+  };
+}
+
+bool _checkCollectibleIndex(int index) {
+  return index == _getCollectibleIndex() && 
+    collectiblesLogic.isLost(widget.wonderType, 1);
+}
+```
+
+When users navigate to the collectible position, it triggers discovery.
+
+## Responsive Image Sizes
+
+```dart
+static String getSelfHostedUrl(String id, UnsplashPhotoSize targetSize) {
+  int size = switch (targetSize) {
+    UnsplashPhotoSize.med => 400,
+    UnsplashPhotoSize.large => 800,
+    UnsplashPhotoSize.xl => 1200,
+  };
+  
+  // Double resolution for high DPI displays
+  if (PlatformInfo.pixelRatio >= 1.5 || PlatformInfo.isDesktop) {
+    size *= 2;
+  }
+  
+  return 'https://www.wonderous.info/unsplash/$id-$size.jpg';
+}
+```
+
+## Performance Optimizations
+
+- **Self-Hosted CDN**: Images served from wonderous.info CDN for speed
+- **Pre-sized Images**: Multiple sizes (400, 800, 1200, 2400) pre-generated
+- **Lazy Loading**: Only visible images loaded
+- **Image Caching**: Flutter's built-in network image caching
+- **Transform Animations**: GPU-accelerated transforms
+- **RepaintBoundary**: Isolates grid repaints
+
+## Accessibility
+
+- Semantic labels for each photo position
+- Focus management for keyboard navigation
+- Screen reader support
+- Live region announcements when selection changes
+- High contrast mode support
+
+## User Experience Details
+
+- **Haptic Feedback**: Light impact on swipe
+- **Smooth Animations**: Configurable durations
+- **Edge Prevention**: Can't scroll beyond grid bounds
+- **Visual Feedback**: Selected image scales and overlay cutout
+- **Gesture Detection**: Eight-way swipe detection

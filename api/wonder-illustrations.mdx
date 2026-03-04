@@ -1,0 +1,605 @@
+---
+title: "Wonder Illustrations"
+description: "Custom illustration system for the eight wonders in the Wonderous app"
+---
+
+## Overview
+
+The wonder illustration system (`lib/ui/wonder_illustrations/`) provides layered, animated illustrations for each of the eight wonders. Each wonder has custom foreground, middleground, and background layers that work together to create parallax effects and immersive visuals.
+
+## Core System
+
+### WonderIllustration
+
+**Location:** `lib/ui/wonder_illustrations/common/wonder_illustration.dart`
+
+Convenience wrapper that routes to the correct wonder-specific illustration.
+
+**Usage:**
+```dart
+WonderIllustration(
+  WonderType.tajMahal,
+  config: WonderIllustrationConfig.mg(
+    isShowing: true,
+    zoom: 0.05,
+  ),
+)
+```
+
+**Supported Wonder Types:**
+- `WonderType.chichenItza` → ChichenItzaIllustration
+- `WonderType.christRedeemer` → ChristRedeemerIllustration
+- `WonderType.colosseum` → ColosseumIllustration
+- `WonderType.greatWall` → GreatWallIllustration
+- `WonderType.machuPicchu` → MachuPicchuIllustration
+- `WonderType.petra` → PetraIllustration
+- `WonderType.pyramidsGiza` → PyramidsGizaIllustration
+- `WonderType.tajMahal` → TajMahalIllustration
+
+---
+
+### WonderIllustrationConfig
+
+**Location:** `lib/ui/wonder_illustrations/common/wonder_illustration_config.dart`
+
+Configuration object controlling which layers are visible and how they behave.
+
+**Full Constructor:**
+```dart
+WonderIllustrationConfig(
+  zoom: 1.0,           // Zoom level multiplier
+  isShowing: true,     // Is this wonder currently visible
+  enableFg: true,      // Show foreground layer
+  enableBg: true,      // Show background layer
+  enableMg: true,      // Show middleground layer
+  enableHero: true,    // Enable Hero animations
+  enableAnims: true,   // Enable entry animations
+  shortMode: false,    // Compact mode for smaller screens
+)
+```
+
+**Factory Constructors:**
+
+**Foreground Only:**
+```dart
+WonderIllustrationConfig.fg(
+  zoom: 0.4,
+  isShowing: true,
+  enableHero: true,
+  enableAnims: true,
+  shortMode: false,
+)
+// Sets enableBg=false, enableMg=false
+```
+
+**Background Only:**
+```dart
+WonderIllustrationConfig.bg(
+  zoom: 1.0,
+  isShowing: true,
+)
+// Sets enableFg=false, enableMg=false
+```
+
+**Middleground Only:**
+```dart
+WonderIllustrationConfig.mg(
+  zoom: 0.05,
+  isShowing: true,
+)
+// Sets enableBg=false, enableFg=false
+```
+
+**Properties:**
+- `zoom` - Scale multiplier (1.0 = default size)
+- `isShowing` - Controls visibility and animations
+- `enableFg/Bg/Mg` - Toggle specific layers
+- `enableHero` - Use Hero widgets for transitions
+- `enableAnims` - Enable entry/exit animations
+- `shortMode` - Adjust layout for small screens
+
+---
+
+### WonderIllustrationBuilder
+
+**Location:** `lib/ui/wonder_illustrations/common/wonder_illustration_builder.dart`
+
+Base builder widget that handles animation and layer composition.
+
+**Internal Structure:**
+Each wonder illustration uses this builder with three builder functions:
+- `bgBuilder` - Builds background layer
+- `mgBuilder` - Builds middleground layer  
+- `fgBuilder` - Builds foreground layer
+
+**Animation:**
+- 600ms fade-in when `isShowing` changes to true
+- Opacity animation for smooth transitions
+- Curved animation (ease-out)
+
+---
+
+## Illustration Components
+
+### IllustrationPiece
+
+**Location:** `lib/ui/wonder_illustrations/common/illustration_piece.dart`
+
+Building block for individual illustration elements (PNG assets).
+
+**Usage:**
+```dart
+IllustrationPiece(
+  fileName: 'taj-mahal.png',
+  heightFactor: 0.6,              // 60% of available height
+  minHeight: 230,                 // Minimum 230px
+  alignment: Alignment.center,
+  initialOffset: Offset(0, 50),   // Slides up 50px on entry
+  initialScale: 0.85,             // Scales from 85% to 100%
+  fractionalOffset: Offset(0, -0.15),
+  zoomAmt: 0.05,                  // Zoom multiplier
+  enableHero: true,               // Hero animation tag
+  dynamicHzOffset: 100,           // Max horizontal offset for wide screens
+  top: (context) => Widget,       // Overlay above
+  bottom: (context) => Widget,    // Overlay below
+)
+```
+
+**Key Properties:**
+
+**Sizing:**
+- `heightFactor` - Height as fraction of container (0.0-1.0)
+- `minHeight` - Minimum height in pixels
+- Aspect ratio calculated automatically from image
+
+**Positioning:**
+- `alignment` - Alignment within parent (default: center)
+- `offset` - Fixed pixel offset
+- `fractionalOffset` - Offset as fraction of piece size
+- `dynamicHzOffset` - Additional offset on wide screens
+
+**Animation:**
+- `initialOffset` - Starting offset (animates to zero)
+- `initialScale` - Starting scale (animates to 1.0)
+- `zoomAmt` - How much this piece responds to config.zoom
+
+**Advanced:**
+- `enableHero` - Adds Hero widget with tag `{type}-{fileName}`
+- `top`/`bottom` - Builder functions for overlays
+
+**Features:**
+- Auto-detects image aspect ratio
+- Smooth entry animations
+- Responsive to parent size changes
+- OverflowBox prevents clipping during animations
+
+---
+
+### AnimatedClouds
+
+**Location:** `lib/ui/wonder_illustrations/common/animated_clouds.dart`
+
+Animated cloud layer that transitions between wonders.
+
+**Usage:**
+```dart
+AnimatedClouds(
+  wonderType: WonderType.tajMahal,
+  opacity: 0.8,
+  cloudSize: 500,
+  enableAnimations: true,
+)
+```
+
+**Properties:**
+- `wonderType` - Current wonder (triggers cloud regeneration)
+- `opacity` - Cloud transparency (0.0-1.0)
+- `cloudSize` - Base cloud size in pixels
+- `enableAnimations` - Enable slide-in effects
+
+**Behavior:**
+- Generates 3 clouds per wonder with random positions
+- Uses seeded random for consistent placement per wonder
+- Clouds slide in from sides (±1000px) over 1500ms
+- Old clouds fade out as new clouds fade in
+- Each wonder has unique cloud seed for variety
+
+**Cloud Seeds:**
+```dart
+chichenItza: 2
+christRedeemer: 78
+colosseum: 1
+greatWall: 500
+machuPicchu: 37
+petra: 111
+pyramidsGiza: 15
+tajMahal: 2
+```
+
+---
+
+### IllustrationTexture
+
+**Location:** `lib/ui/wonder_illustrations/common/paint_textures.dart`
+
+Applies texture overlays using blend modes.
+
+**Usage:**
+```dart
+IllustrationTexture(
+  ImagePaths.roller2,
+  flipY: true,
+  opacity: _anim.drive(Tween(begin: 0, end: 0.7)),
+  color: bgColor,
+  scale: 1.15,
+)
+```
+
+**Properties:**
+- `imagePath` - Asset path to texture image
+- `flipY` - Flip texture vertically
+- `opacity` - Animated or static opacity
+- `color` - Tint color
+- `scale` - Texture scale multiplier
+
+---
+
+### WonderTitleText
+
+**Location:** `lib/ui/wonder_illustrations/common/wonder_title_text.dart`
+
+Stylized title text for wonders.
+
+**Usage:**
+```dart
+WonderTitleText(
+  wonderData,
+  enableShadows: true,
+)
+```
+
+---
+
+### WonderHero
+
+**Location:** `lib/ui/wonder_illustrations/common/wonder_hero.dart`
+
+Manages Hero widget animations between screens.
+
+---
+
+## Individual Wonder Illustrations
+
+Each wonder has a dedicated illustration file that defines its layers:
+
+### Taj Mahal Illustration
+
+**Location:** `lib/ui/wonder_illustrations/taj_mahal_illustration.dart`
+
+**Layers:**
+
+**Background:**
+- Solid color background (fades in)
+- Roller texture overlay (70% opacity)
+- Sun element (positioned top-left)
+
+**Middleground:**
+- Main Taj Mahal building
+- Reflecting pool (positioned below building)
+
+**Foreground:**
+- Mango tree branches (left and right)
+- Scale dynamically with screen width
+- Parallax zoom effect (0.25x)
+
+**Code Structure:**
+```dart
+class TajMahalIllustration extends StatelessWidget {
+  final fgColor = WonderType.tajMahal.fgColor;
+  final bgColor = WonderType.tajMahal.bgColor;
+  final assetPath = WonderType.tajMahal.assetPath;
+  
+  List<Widget> _buildBg(BuildContext context, Animation<double> anim) { ... }
+  List<Widget> _buildMg(BuildContext context, Animation<double> anim) { ... }
+  List<Widget> _buildFg(BuildContext context, Animation<double> anim) { ... }
+}
+```
+
+---
+
+### Other Wonder Illustrations
+
+All wonders follow the same pattern:
+
+**ChichenItzaIllustration** - `chichen_itza_illustration.dart`
+- Pyramid structure
+- Jungle foliage foreground
+- Sky and clouds background
+
+**ChristRedeemerIllustration** - `christ_redeemer_illustration.dart`
+- Christ statue
+- Mountain backdrop
+- Atmospheric layers
+
+**ColosseumIllustration** - `colosseum_illustration.dart`
+- Roman architecture
+- Ruins and arches
+- Stone textures
+
+**GreatWallIllustration** - `great_wall_illustration.dart`
+- Wall segments
+- Mountain ranges
+- Watchtowers
+
+**MachuPicchuIllustration** - `machu_picchu_illustration.dart`
+- Terraced ruins
+- Mountain peaks
+- Mist effects
+
+**PetraIllustration** - `petra_illustration.dart`
+- Treasury facade
+- Rock formations
+- Desert atmosphere
+
+**PyramidsGizaIllustration** - `pyramids_giza_illustration.dart`
+- Three pyramids
+- Desert foreground
+- Sun and sky
+
+---
+
+## Implementation Examples
+
+### Basic Usage
+
+**Single Layer:**
+```dart
+WonderIllustration(
+  WonderType.colosseum,
+  config: WonderIllustrationConfig.bg(
+    isShowing: true,
+  ),
+)
+```
+
+### Parallax Layers
+
+**Home Screen Pattern:**
+```dart
+Stack(
+  children: [
+    // Background layers (static)
+    ...wonders.map((wonder) =>
+      WonderIllustration(
+        wonder.type,
+        config: WonderIllustrationConfig.bg(
+          isShowing: currentWonder == wonder.type,
+        ),
+      ),
+    ),
+    
+    // Middleground (main content with slight zoom)
+    WonderIllustration(
+      currentWonder,
+      config: WonderIllustrationConfig.mg(
+        isShowing: true,
+        zoom: 0.05 * swipeAmount,
+      ),
+    ),
+    
+    // Foreground (parallax with strong zoom)
+    WonderIllustration(
+      currentWonder,
+      config: WonderIllustrationConfig.fg(
+        isShowing: true,
+        zoom: 0.4 * swipeAmount,
+      ),
+    ),
+  ],
+)
+```
+
+### With Animations
+
+**Respond to User Input:**
+```dart
+AnimatedBuilder(
+  animation: _scrollController,
+  builder: (context, child) {
+    double progress = _scrollController.offset / maxScroll;
+    return WonderIllustration(
+      WonderType.petra,
+      config: WonderIllustrationConfig(
+        zoom: 1 + (progress * 0.2),  // Zoom from 1.0 to 1.2
+        isShowing: true,
+      ),
+    );
+  },
+)
+```
+
+---
+
+## Asset Structure
+
+Each wonder has its own asset directory:
+
+```
+assets/images/wonders/
+  taj-mahal/
+    sun.png
+    taj-mahal.png
+    pool.png
+    foreground-left.png
+    foreground-right.png
+  
+  petra/
+    background.png
+    petra-main.png
+    foreground.png
+  
+  // ... etc for all 8 wonders
+```
+
+**Asset Guidelines:**
+- PNG format with transparency
+- High resolution (2x, 3x for retina)
+- Separate layers as individual files
+- Consistent naming conventions
+
+---
+
+## Layering Strategy
+
+### Background Layer
+**Purpose:** Static backdrop and atmosphere
+- Solid color fills
+- Texture overlays
+- Sky elements (sun, moon)
+- Far distant elements
+
+### Middleground Layer
+**Purpose:** Main subject/wonder
+- Primary structure
+- Hero architectural elements
+- Medium-distance objects
+- Minimal zoom response
+
+### Foreground Layer  
+**Purpose:** Depth and framing
+- Close-up environmental details
+- Foliage, branches, rocks
+- Strong parallax effect
+- High zoom multiplier (0.25-0.4)
+
+---
+
+## Performance Considerations
+
+**Optimization Techniques:**
+
+1. **RepaintBoundary** - Wrap illustrations to isolate repaints:
+```dart
+RepaintBoundary(
+  child: WonderIllustration(...),
+)
+```
+
+2. **Hero Animations** - Only enable when needed:
+```dart
+config: WonderIllustrationConfig(
+  enableHero: !isAnimating,
+)
+```
+
+3. **Conditional Rendering** - Skip hidden layers:
+```dart
+if (config.enableBg) ..._buildBg(context, anim)
+```
+
+4. **Image Caching** - Assets are cached automatically by Flutter
+
+5. **OverflowBox** - Prevents layout recalculations during transforms
+
+---
+
+## Responsive Design
+
+**Short Mode:**
+For smaller screens or portrait orientation:
+```dart
+WonderIllustrationConfig(
+  shortMode: true,  // Adjusts positioning and scales
+)
+```
+
+**Dynamic Offsets:**
+Automatic adjustment for wide screens:
+```dart
+IllustrationPiece(
+  dynamicHzOffset: 150,  // Shifts up to 150px on wide screens
+  // ...
+)
+```
+
+**Scale Factors:**
+Pieces can scale based on screen dimensions:
+```dart
+final mangoScale = max(context.widthPx - 400, 0) / 1000;
+heightFactor: 0.5 + 0.4 * mangoScale
+```
+
+---
+
+## Accessibility
+
+**Best Practices:**
+
+1. **Exclude from Semantics:**
+```dart
+Image.asset(
+  imagePath,
+  excludeFromSemantics: true,  // Decorative only
+)
+```
+
+2. **Semantic Descriptions:**
+Add descriptions at the screen level, not individual pieces.
+
+3. **Reduced Motion:**
+Respect system preferences:
+```dart
+enableAnims: !$styles.disableAnimations
+```
+
+---
+
+## Creating New Illustrations
+
+**Steps:**
+
+1. **Create asset directory:**
+```
+assets/images/wonders/my-wonder/
+```
+
+2. **Export layers as PNGs:**
+- background.png
+- main-structure.png  
+- foreground.png
+
+3. **Create illustration file:**
+```dart
+class MyWonderIllustration extends StatelessWidget {
+  final config;
+  
+  @override
+  Widget build(BuildContext context) {
+    return WonderIllustrationBuilder(
+      config: config,
+      wonderType: WonderType.myWonder,
+      bgBuilder: _buildBg,
+      mgBuilder: _buildMg,
+      fgBuilder: _buildFg,
+    );
+  }
+  
+  List<Widget> _buildBg(...) { /* Background layer */ }
+  List<Widget> _buildMg(...) { /* Middleground layer */ }
+  List<Widget> _buildFg(...) { /* Foreground layer */ }
+}
+```
+
+4. **Update WonderIllustration switch:**
+```dart
+case WonderType.myWonder:
+  return MyWonderIllustration(config: config);
+```
+
+---
+
+## Related
+
+- [Screens](/api/screens) - How screens use illustrations
+- [Common Widgets](/api/common-widgets) - Shared UI components
+- [Theming](/customization/theming) - Theme colors and wonder-specific colors
