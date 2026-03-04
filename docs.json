@@ -99,7 +99,10 @@
               "api/wonders-logic",
               "api/timeline-logic",
               "api/collectibles-logic",
-              "api/artifact-logic"
+              "api/artifact-logic",
+              "api/settings-logic",
+              "api/locale-logic",
+              "api/unsplash-logic"
             ]
           },
           {

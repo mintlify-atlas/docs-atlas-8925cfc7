@@ -1,0 +1,190 @@
+---
+title: "UnsplashLogic"
+description: "Photo gallery integration and collection management"
+---
+
+## Overview
+
+**Location:** `lib/logic/unsplash_logic.dart`
+
+The `UnsplashLogic` class provides access to pre-mapped Unsplash photo collections for each wonder. It acts as a facade for the `UnsplashService` and manages photo collection IDs.
+
+## Registration
+
+```dart
+GetIt.I.registerLazySingleton<UnsplashLogic>(() => UnsplashLogic());
+```
+
+Access via global accessor:
+```dart
+UnsplashLogic get unsplashLogic => GetIt.I.get<UnsplashLogic>();
+```
+
+## Properties
+
+<ParamField path="service" type="UnsplashService">
+  Access to the underlying `UnsplashService` for making API calls.
+  
+  ```dart
+  UnsplashService get service => GetIt.I.get<UnsplashService>();
+  ```
+</ParamField>
+
+## Methods
+
+### getCollectionPhotos()
+
+Retrieves the list of photo IDs for a given Unsplash collection.
+
+```dart
+List<String>? getCollectionPhotos(String collectionId)
+```
+
+**Parameters:**
+- `collectionId`: The Unsplash collection ID (e.g., `"2072035"` for Chichen Itza)
+
+**Returns:**
+- `List<String>?`: List of Unsplash photo IDs, or `null` if collection not found
+
+**Example:**
+```dart
+// Get photos for a wonder's collection
+final collectionId = wonderData.unsplashCollectionId;
+final photoIds = unsplashLogic.getCollectionPhotos(collectionId);
+
+if (photoIds != null) {
+  print('Found ${photoIds.length} photos');
+}
+```
+
+## Photo Collections by Wonder
+
+From `lib/logic/data/unsplash_photo_data.dart`, each wonder has a pre-mapped collection:
+
+| Wonder | Collection ID | Photo Count |
+|--------|--------------|-------------|
+| Chichen Itza | `2072035` | 25 photos |
+| Christ the Redeemer | `9881936` | 25 photos |
+| Colosseum | `7798262` | 25 photos |
+| Great Wall | `3668012` | 25 photos |
+| Machu Picchu | `3237397` | 25 photos |
+| Petra | `5109404` | 25 photos |
+| Pyramids of Giza | `1146829` | 25 photos |
+| Taj Mahal | `6605554` | 25 photos |
+
+## UnsplashPhotoData Structure
+
+The pre-mapped photo collections are defined in `UnsplashPhotoData`:
+
+```dart
+class UnsplashPhotoData {
+  static final Map<String, List<String>> photosByCollectionId = {
+    '2072035': [
+      // Chichen Itza photo IDs
+      'photo-id-1',
+      'photo-id-2',
+      // ... 25 total
+    ],
+    // ... other collections
+  };
+}
+```
+
+## Photo URL Construction
+
+Photo URLs are constructed using Unsplash CDN patterns:
+
+```dart
+// Small thumbnail (400px)
+String smallUrl(String photoId) => 
+  'https://images.unsplash.com/photo-$photoId?w=400';
+
+// Medium size (800px)
+String mediumUrl(String photoId) => 
+  'https://images.unsplash.com/photo-$photoId?w=800';
+
+// Large size (1600px)
+String largeUrl(String photoId) => 
+  'https://images.unsplash.com/photo-$photoId?w=1600';
+```
+
+## Usage in Photo Gallery
+
+The photo gallery uses a 5×5 grid to display 25 photos:
+
+```dart
+class PhotoGalleryScreen extends StatefulWidget {
+  final WonderData wonderData;
+  
+  @override
+  Widget build(BuildContext context) {
+    final collectionId = wonderData.unsplashCollectionId;
+    final photoIds = unsplashLogic.getCollectionPhotos(collectionId);
+    
+    if (photoIds == null || photoIds.isEmpty) {
+      return EmptyState();
+    }
+    
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 5,
+        mainAxisSpacing: 0,
+        crossAxisSpacing: 0,
+      ),
+      itemCount: photoIds.length,
+      itemBuilder: (context, index) {
+        final photoId = photoIds[index];
+        return PhotoGridTile(photoId: photoId);
+      },
+    );
+  }
+}
+```
+
+## Self-Hosted Fallback
+
+For production reliability, Wonderous uses a self-hosted CDN as fallback:
+
+```dart
+// Primary: Unsplash CDN
+String primaryUrl = 'https://images.unsplash.com/photo-$photoId?w=800';
+
+// Fallback: Self-hosted
+String fallbackUrl = 'https://wonderous.app/photos/$photoId-800.jpg';
+```
+
+## Integration with Collectibles
+
+Certain photos in the gallery hide collectibles. When a user navigates to specific grid positions, collectibles are discovered:
+
+```dart
+final photoIndex = gridX + (gridY * 5); // 0-24 for 5×5 grid
+final collectible = wonderData.hiddenArtifacts[photoIndex];
+
+if (collectible != null) {
+  collectiblesLogic.setState(collectible, CollectibleState.discovered);
+  // Show CollectibleFoundScreen
+}
+```
+
+## API Configuration
+
+Unsplash API credentials are configured in:
+- **Development:** Uses Unsplash API directly with API key
+- **Production:** Uses self-hosted CDN for better performance and reliability
+
+**Environment detection:**
+```dart
+if (kDebugMode) {
+  // Use Unsplash API with rate limits
+} else {
+  // Use self-hosted CDN
+}
+```
+
+## Related
+
+- [Unsplash Integration](/integrations/unsplash) - API setup and configuration
+- [Photo Gallery Feature](/features/photo-gallery) - 5×5 grid navigation system
+- [Collectibles Feature](/features/collectibles) - Hidden artifacts in photos
+- [WonderData](/api/wonder-data) - `unsplashCollectionId` property

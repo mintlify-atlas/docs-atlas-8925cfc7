@@ -192,6 +192,136 @@ void _handleReset()  // Reset all collection progress
 
 ---
 
+### IntroScreen
+
+**Location:** `lib/ui/screens/intro/intro_screen.dart`
+
+The onboarding screen shown to first-time users before accessing the main app.
+
+**Key Features:**
+- Multi-slide introduction to Wonderous features
+- Background images of wonders
+- Skip and continue navigation buttons
+- Marks onboarding as complete when finished
+
+**Flow:**
+1. Display welcome slides with wonder imagery
+2. User swipes through introduction
+3. On completion, sets `settingsLogic.hasCompletedOnboarding.value = true`
+4. Navigates to HomeScreen
+
+**State:**
+- Shown when `settingsLogic.hasCompletedOnboarding.value == false`
+- Controlled by bootstrap logic in `AppLogic`
+
+```dart
+// From lib/logic/app_logic.dart:84-89
+bool showIntro = settingsLogic.hasCompletedOnboarding.value == false;
+if (showIntro) {
+  appRouter.go(ScreenPaths.intro);
+} else {
+  appRouter.go(initialDeeplink ?? ScreenPaths.home);
+}
+```
+
+---
+
+### CollectibleFoundScreen
+
+**Location:** `lib/ui/screens/collectible_found/collectible_found_screen.dart`
+
+Celebration screen displayed when a user discovers a hidden collectible in the photo gallery.
+
+**Key Features:**
+- Full-screen modal presentation
+- Collectible artifact image display
+- Particle effect celebration animation
+- "View in Collection" navigation button
+- Marks collectible as discovered
+
+**Trigger:**
+- User navigates to specific photo grid position containing a collectible
+- Collectible state changes from `lost` to `discovered`
+
+**Constructor:**
+```dart
+CollectibleFoundScreen({
+  required this.collectible,  // CollectibleData
+})
+```
+
+**Components:**
+- Artifact image preview
+- Collectible title and wonder name
+- Animated particle effects using `particle_field` package
+- Success messaging
+
+---
+
+### PhotoGalleryScreen
+
+**Location:** `lib/ui/screens/photo_gallery/photo_gallery_screen.dart`
+
+Interactive 5×5 grid photo browser for viewing wonder images from Unsplash.
+
+**Key Features:**
+- 5×5 grid navigation (25 photos total)
+- Swipe gestures to move between photos
+- Keyboard arrow key support (web/desktop)
+- Collectible discovery integration
+- Fullscreen image viewer
+- Grid position indicator
+
+**Constructor:**
+```dart
+PhotoGalleryScreen({
+  required this.wonderType,    // WonderType
+  this.initialPhotoIndex = 0,  // Starting photo (0-24)
+})
+```
+
+**Navigation:**
+- Swipe left/right/up/down to move through grid
+- Arrow keys for desktop navigation
+- Tap photo for fullscreen view
+- Hidden collectibles at certain grid positions
+
+**State:**
+- `_gridX`, `_gridY`: Current grid position (0-4 each)
+- `_photoIndex`: Current photo index (0-24)
+- Photo IDs from `UnsplashLogic.getCollectionPhotos()`
+
+**Grid Math:**
+```dart
+int photoIndex = gridX + (gridY * 5);  // Convert 2D to 1D index
+```
+
+---
+
+### HomeMenuScreen
+
+**Location:** `lib/ui/screens/home_menu/home_menu_screen.dart`
+
+Overlay menu for quick wonder selection and app settings.
+
+**Key Features:**
+- List of all 8 wonders with images
+- Direct navigation to any wonder
+- Settings and preferences access
+- Modal overlay presentation
+
+**Components:**
+- Wonder tiles with names and images
+- Close button
+- Animated slide-in transition
+
+**Navigation:**
+- Opens from HomeScreen menu button
+- Tapping a wonder navigates to WonderDetailsScreen
+- Closes when selecting a wonder or tapping outside
+
+---
+
 ## Screen Structure
 
 All screens follow a consistent structure:

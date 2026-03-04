@@ -1,0 +1,214 @@
+---
+title: "LocaleLogic"
+description: "Localization and language switching"
+---
+
+## Overview
+
+**Location:** `lib/logic/locale_logic.dart`
+
+The `LocaleLogic` class manages app localization, loading translations, and handling locale changes. It integrates with Flutter's `AppLocalizations` system and detects the system locale.
+
+## Registration
+
+```dart
+GetIt.I.registerLazySingleton<LocaleLogic>(() => LocaleLogic());
+```
+
+Access via global accessor:
+```dart
+LocaleLogic get localeLogic => GetIt.I.get<LocaleLogic>();
+
+// Convenient access to localized strings
+AppLocalizations get $strings => localeLogic.strings;
+```
+
+## Properties
+
+<ParamField path="strings" type="AppLocalizations">
+  Access to all localized strings for the current locale.
+  
+  **Example:**
+  ```dart
+  Text($strings.appTitle)
+  Text($strings.wonderDetailsTitle)
+  ```
+</ParamField>
+
+<ParamField path="isLoaded" type="bool">
+  Returns `true` if translations have been loaded, `false` otherwise.
+</ParamField>
+
+<ParamField path="isEnglish" type="bool">
+  Returns `true` if the current locale is English (`en`).
+  
+  ```dart
+  bool isEnglish => strings.localeName == 'en';
+  ```
+</ParamField>
+
+## Methods
+
+### load()
+
+Loads translations for the appropriate locale. Called during app bootstrap.
+
+```dart
+Future<void> load()
+```
+
+**Behavior:**
+1. Checks `settingsLogic.currentLocale.value` for saved preference
+2. Falls back to system locale via `findSystemLocale()`
+3. Validates locale is in `AppLocalizations.supportedLocales`
+4. Defaults to English (`en`) if locale not supported
+5. Loads translations via `AppLocalizations.delegate.load()`
+6. Saves selected locale to `settingsLogic`
+
+**Supported locales:**
+- `en` - English
+- `zh` - Chinese (Simplified)
+
+**Example:**
+```dart
+// During app initialization
+await localeLogic.load();
+```
+
+### loadIfChanged()
+
+Reloads translations if the locale has changed.
+
+```dart
+Future<void> loadIfChanged(Locale locale)
+```
+
+**Parameters:**
+- `locale`: The new locale to load
+
+**Behavior:**
+- Only reloads if the locale differs from current `strings.localeName`
+- Validates locale is supported before loading
+
+**Example:**
+```dart
+// Called from SettingsLogic.changeLocale()
+await localeLogic.loadIfChanged(Locale('zh'));
+```
+
+## Usage Examples
+
+### Access Localized Strings
+
+```dart
+import 'package:wonders/common_libs.dart';
+
+class WelcomeScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text($strings.welcomeTitle),
+        Text($strings.welcomeSubtitle),
+        ElevatedButton(
+          onPressed: () {},
+          child: Text($strings.continueButton),
+        ),
+      ],
+    );
+  }
+}
+```
+
+### Check Current Locale
+
+```dart
+if (localeLogic.isEnglish) {
+  // Use English-specific font (Cinzel)
+  fontFamily = 'Cinzel';
+} else {
+  // Use Chinese-specific font (MaShanZheng)
+  fontFamily = 'MaShanZheng';
+}
+```
+
+### Debug Locale Override
+
+For testing, you can force a locale in debug mode:
+
+```dart
+// In lib/logic/locale_logic.dart:18-20
+if (kDebugMode) {
+  locale = Locale('zh'); // Uncomment to test Chinese
+}
+```
+
+## Integration with MaterialApp
+
+From `lib/main.dart:56-73`:
+
+```dart
+class _WondersAppState extends State<WondersApp> with GetItStateMixin {
+  @override
+  Widget build(BuildContext context) {
+    final locale = watchX((SettingsLogic s) => s.currentLocale);
+    return MaterialApp.router(
+      locale: locale == null ? null : Locale(locale),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      // ...
+    );
+  }
+}
+```
+
+## Localization Files
+
+**Configuration:** `l10n.yaml`
+```yaml
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+```
+
+**Translation files:**
+- `lib/l10n/app_en.arb` - English translations
+- `lib/l10n/app_zh.arb` - Chinese translations
+
+**Generated code:**
+- `lib/l10n/app_localizations.dart` - Base class
+- `lib/l10n/app_localizations_en.dart` - English implementation
+- `lib/l10n/app_localizations_zh.dart` - Chinese implementation
+
+## System Locale Detection
+
+Uses `intl_standalone` package to detect the system locale:
+
+```dart
+final localeCode = settingsLogic.currentLocale.value ?? await findSystemLocale();
+```
+
+Returns locale code like `en_US`, `zh_CN`, etc. The language code is extracted:
+```dart
+locale = Locale(localeCode.split('_')[0]); // "en" from "en_US"
+```
+
+## Initialization
+
+Locale is loaded during app bootstrap in `AppLogic.bootstrap()`:
+
+```dart
+// From lib/logic/app_logic.dart:64-65
+await localeLogic.load();
+```
+
+## Related
+
+- [SettingsLogic](/api/settings-logic) - User preferences including locale
+- [Localization](/customization/localization) - Adding translations guide
+- [Theming](/customization/theming) - Locale-aware typography

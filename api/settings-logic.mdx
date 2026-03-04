@@ -1,0 +1,163 @@
+---
+title: "SettingsLogic"
+description: "User preferences and app configuration management"
+---
+
+## Overview
+
+**Location:** `lib/logic/settings_logic.dart`
+
+The `SettingsLogic` class manages user preferences and app configuration, including onboarding state, locale preferences, and UI settings. It uses `ThrottledSaveLoadMixin` for automatic persistence to local storage.
+
+## Registration
+
+```dart
+GetIt.I.registerLazySingleton<SettingsLogic>(() => SettingsLogic());
+```
+
+Access via global accessor:
+```dart
+SettingsLogic get settingsLogic => GetIt.I.get<SettingsLogic>();
+```
+
+## Properties
+
+<ParamField path="hasCompletedOnboarding" type="ValueNotifier<bool>">
+  Tracks whether the user has completed the intro/onboarding flow. Default: `false`.
+  
+  When `false`, the app shows the `IntroScreen` on launch. Set to `true` after completing onboarding.
+</ParamField>
+
+<ParamField path="hasDismissedSearchMessage" type="ValueNotifier<bool>">
+  Tracks whether the user has dismissed the search help message. Default: `false`.
+</ParamField>
+
+<ParamField path="isSearchPanelOpen" type="ValueNotifier<bool>">
+  Tracks the open/closed state of the search panel. Default: `true`.
+</ParamField>
+
+<ParamField path="currentLocale" type="ValueNotifier<String?>">
+  The currently selected locale code (e.g., "en", "zh"). Default: `null` (system locale).
+</ParamField>
+
+<ParamField path="prevWonderIndex" type="ValueNotifier<int?>">
+  The last viewed wonder index for preserving navigation state. Default: `null`.
+</ParamField>
+
+<ParamField path="useBlurs" type="bool">
+  Whether to use blur effects in the UI. Returns `false` on Android (performance), `true` on other platforms.
+  
+  ```dart
+  final bool useBlurs = !PlatformInfo.isAndroid;
+  ```
+</ParamField>
+
+## Methods
+
+### changeLocale()
+
+Changes the app's locale and reloads localized content.
+
+```dart
+Future<void> changeLocale(Locale value)
+```
+
+**Parameters:**
+- `value`: The new `Locale` to apply
+
+**Behavior:**
+1. Updates `currentLocale.value` with the language code
+2. Calls `localeLogic.loadIfChanged()` to load translations
+3. Reinitializes `wondersLogic` and `timelineLogic` with localized data
+
+**Example:**
+```dart
+// Change to Chinese
+await settingsLogic.changeLocale(Locale('zh'));
+
+// Change to English
+await settingsLogic.changeLocale(Locale('en'));
+```
+
+### Persistence Methods
+
+Inherited from `ThrottledSaveLoadMixin`:
+
+**copyFromJson()** - Deserializes settings from JSON:
+```dart
+void copyFromJson(Map<String, dynamic> value)
+```
+
+**toJson()** - Serializes settings to JSON:
+```dart
+Map<String, dynamic> toJson()
+```
+
+**Persisted fields:**
+- `hasCompletedOnboarding`
+- `hasDismissedSearchMessage`
+- `currentLocale`
+- `isSearchPanelOpen`
+- `prevWonderIndex` (stored as `lastWonderIndex`)
+
+## Usage Examples
+
+### Check Onboarding Status
+
+```dart
+bool showIntro = settingsLogic.hasCompletedOnboarding.value == false;
+if (showIntro) {
+  appRouter.go(ScreenPaths.intro);
+} else {
+  appRouter.go(ScreenPaths.home);
+}
+```
+
+### Watch Settings Changes
+
+```dart
+class SettingsScreen extends StatelessWidget with GetItStatefulWidgetMixin {
+  @override
+  Widget build(BuildContext context) {
+    final locale = watchX((SettingsLogic s) => s.currentLocale);
+    final hasCompletedOnboarding = watchX((SettingsLogic s) => s.hasCompletedOnboarding);
+    
+    return Column(
+      children: [
+        Text('Current locale: ${locale.value}'),
+        Text('Onboarding complete: ${hasCompletedOnboarding.value}'),
+      ],
+    );
+  }
+}
+```
+
+### Complete Onboarding
+
+```dart
+// Mark onboarding as complete
+settingsLogic.hasCompletedOnboarding.value = true;
+// Settings are automatically saved via ThrottledSaveLoadMixin
+```
+
+## Initialization
+
+Settings are loaded during app bootstrap in `AppLogic.bootstrap()`:
+
+```dart
+// From lib/logic/app_logic.dart:62
+await settingsLogic.load();
+```
+
+## File Storage
+
+Settings are persisted to:
+- **File:** `settings.dat`
+- **Format:** JSON
+- **Location:** App documents directory (via `path_provider`)
+
+## Related
+
+- [LocaleLogic](/api/locale-logic) - Localization management
+- [AppLogic](/api/app-logic) - App bootstrap and initialization
+- [State Management](/architecture/state-management) - ValueNotifier pattern
