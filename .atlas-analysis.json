@@ -1,0 +1,140 @@
+{
+  "projectType": "saas",
+  "projectName": "Wonderous",
+  "projectDescription": "A showcase Flutter app that educates and entertains users about the world's most famous structures with rich visual experiences.",
+  "theme": "almond",
+  "primaryColor": "#E4935D",
+  "lightColor": "#F8ECE5",
+  "darkColor": "#1E1B18",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quick-start"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/wonders",
+              "features/timeline",
+              "features/artifacts",
+              "features/photo-gallery",
+              "features/collectibles"
+            ]
+          },
+          {
+            "group": "Customization",
+            "pages": [
+              "customization/theming",
+              "customization/localization",
+              "customization/animations"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/unsplash",
+              "integrations/google-maps",
+              "integrations/metropolitan-museum"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Architecture",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "architecture/overview",
+              "architecture/project-structure",
+              "architecture/state-management"
+            ]
+          },
+          {
+            "group": "Core Systems",
+            "pages": [
+              "architecture/routing",
+              "architecture/data-models",
+              "architecture/logic-layer",
+              "architecture/ui-components"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "architecture/platform-specific",
+              "architecture/performance",
+              "architecture/accessibility"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Logic Classes",
+            "pages": [
+              "api/app-logic",
+              "api/wonders-logic",
+              "api/timeline-logic",
+              "api/collectibles-logic",
+              "api/artifact-logic"
+            ]
+          },
+          {
+            "group": "Data Models",
+            "pages": [
+              "api/wonder-data",
+              "api/artifact-data",
+              "api/collectible-data",
+              "api/timeline-data"
+            ]
+          },
+          {
+            "group": "UI Components",
+            "pages": [
+              "api/screens",
+              "api/common-widgets",
+              "api/wonder-illustrations"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Interactive exploration of 8 world wonders with rich visual effects",
+    "Historical timeline with events spanning from 3000 BCE to present",
+    "Artifact search powered by Metropolitan Museum API",
+    "Photo galleries with Unsplash integration",
+    "Collectible discovery system with progress tracking",
+    "Multi-language support (English and Chinese)",
+    "Cross-platform support (iOS, Android, Web, macOS, Windows)",
+    "Advanced Flutter animations and custom transitions",
+    "Responsive design with portrait and landscape layouts",
+    "Google Maps integration for wonder locations"
+  ],
+  "publicApiSurface": [
+    "WondersLogic - Core logic for managing wonder data",
+    "AppLogic - Main app controller and bootstrap",
+    "TimelineLogic - Historical timeline management",
+    "CollectiblesLogic - Collectibles tracking and persistence",
+    "ArtifactAPILogic - Metropolitan Museum artifact search",
+    "UnsplashLogic - Photo gallery integration",
+    "SettingsLogic - User preferences and app configuration",
+    "LocaleLogic - Localization and language switching",
+    "WonderData - Data model for world wonders",
+    "WonderType - Enum for 8 world wonders",
+    "AppRouter - GoRouter configuration",
+    "ScreenPaths - Route path definitions"
+  ]
+}
